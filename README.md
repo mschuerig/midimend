@@ -40,6 +40,10 @@ swift build -c release
 
 Requires macOS 13+. No entitlements or permissions needed.
 
+Without arguments, midimend runs `~/Music/Midimend/config.json` — a
+visible folder to keep your config and scripts in, next to where
+Logic/MainStage users already keep their content.
+
 To see what's connected — and, given a config, what it matches:
 
 ```sh

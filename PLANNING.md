@@ -49,6 +49,23 @@ as few surprises as possible, and problems must be easy to diagnose.
    (done); homebrew formula in `mschuerig/homebrew-tap` building from
    source, with a `service` block so `brew services start midimend`
    answers "how does the app run" (starts at login, restarts on crash).
+   - **Config home (decided):** `~/Music/Midimend/config.json` — visible
+     in Finder and musician-idiomatic (like `~/Music/Audio Music Apps`);
+     `~/Library/Application Support` rejected because it is meant for
+     app-managed files, not hand-edited documents. Bare `midimend` (and
+     thus the brew service) runs this config and prints a
+     create-it-like-this message when it is missing.
+   - **Formula draft:** `packaging/midimend.rb`. Binary and its resource
+     bundle (Bootstrap.js) must be installed side by side — the SwiftPM
+     `Bundle.module` accessor looks next to the real executable and its
+     other fallback is a baked-in absolute build path that only exists on
+     the build machine — hence libexec + a bin exec-script shim.
+     `keep_alive crashed: true` restarts after crashes but not after
+     deliberate exits (missing config), avoiding a respawn loop.
+     Verified locally in a fake cellar layout. CI: `.github/workflows/ci.yml`.
+   - **Remaining (needs Michael):** push the repo, tag `v0.1.0`, fill the
+     formula's sha256 from the tag tarball, create the tap repo, move the
+     formula there.
    - **Signing:** skipped for now, but to be set up as soon as midimend is
      distributed via homebrew — not strictly required for a from-source
      formula (curl-downloaded files carry no quarantine attribute, so

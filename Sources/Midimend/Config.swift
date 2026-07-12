@@ -82,6 +82,15 @@ public struct Config: Codable, Sendable {
     /// valueStrings entry as a string; checkboxes accept booleans.
     public var parameters: [String: ParameterValue]?
 
+    /// The well-known config location used when midimend is started without
+    /// arguments (e.g. by `brew services`): visible in Finder, next to the
+    /// user's scripts, in the folder musicians already know from
+    /// Logic/MainStage (~/Music/Audio Music Apps).
+    public static var defaultURL: URL {
+        FileManager.default.homeDirectoryForCurrentUser
+            .appendingPathComponent("Music/Midimend/config.json")
+    }
+
     public static func load(from url: URL) throws -> Config {
         let data: Data
         do {

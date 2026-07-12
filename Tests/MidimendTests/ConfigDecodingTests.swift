@@ -48,6 +48,16 @@ final class ConfigDecodingTests: XCTestCase {
         XCTAssertEqual(config.parameters?["Enabled"], .bool(true))
     }
 
+    /// The well-known config home: visible in Finder, next to the user's
+    /// scripts, in the folder musicians already know from Logic/MainStage
+    /// (~/Music/Audio Music Apps).
+    func testDefaultConfigLocation() {
+        XCTAssertEqual(
+            Config.defaultURL.path,
+            (NSHomeDirectory() as NSString).appendingPathComponent("Music/Midimend/config.json")
+        )
+    }
+
     func testScriptURLResolution() {
         let configURL = URL(fileURLWithPath: "/etc/midimend/config.json")
         var config = Config(script: "s.js", midi: MIDISetup(outputs: []), parameters: nil)

@@ -5,12 +5,14 @@ let arguments = Array(CommandLine.arguments.dropFirst())
 
 func printUsage() {
     print("""
-    usage: midimend <config.json>
+    usage: midimend [config.json]
            midimend --list-devices [config.json]
            midimend --init <script.js>
 
     Mends MIDI between CoreMIDI ports by running a JavaScript processing
     script per event. See README.md for the config file format and script API.
+
+    Without arguments, runs the config at \(Config.defaultURL.path).
 
     --list-devices  print the MIDI devices currently present; given a config,
                     also show which of them its "hardware" entries match
@@ -87,10 +89,23 @@ func initTemplate(scriptPath: String) throws {
     print(ConfigTemplate.render(scriptPath: scriptPath, parameters: engine.parameters))
 }
 
+let configPath: String
+
 switch arguments.first {
 case nil:
-    printUsage()
-    exit(1)
+    let defaultURL = Config.defaultURL
+    guard FileManager.default.fileExists(atPath: defaultURL.path) else {
+        FileHandle.standardError.write(Data("""
+        error: no config found at \(defaultURL.path)
+
+        Create one there — a skeleton to start from:
+            midimend --init your-script.js > \(defaultURL.path)
+        — or pass a config file directly: midimend <config.json>
+
+        """.utf8))
+        exit(1)
+    }
+    configPath = defaultURL.path
 case "-h", "--help":
     printUsage()
     exit(0)
@@ -124,11 +139,12 @@ default:
         printUsage()
         exit(1)
     }
+    configPath = arguments[0]
 }
 
 let engine: Engine
 do {
-    engine = try Engine(configPath: arguments[0])
+    engine = try Engine(configPath: configPath)
     try engine.start()
     print("midimend running — Ctrl-C to quit")
 } catch {
