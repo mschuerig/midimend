@@ -17,9 +17,9 @@ as few surprises as possible, and problems must be easy to diagnose.
    filled in.
 3. **Device robustness.** Default to all inputs when `inputs` is omitted
    (excluding our own virtual ports — feedback-loop guard); connect
-   hot-plugged devices via the existing setup-change notification; match
-   display names as well as endpoint names (users rename devices in
-   Audio MIDI Setup).
+   hot-plugged devices via the existing setup-change notification.
+   (Matching already uses the user-visible display name — the name shown
+   in Audio MIDI Setup, including user renames.)
    - **Port exclusion:** controllers often expose a second endpoint for DAW
      control (MCU/HUI + integration scripts), e.g. the MiniLab's
      "MiniLab37 DAW" next to "MiniLab37 MIDI". These must be ignorable —
@@ -95,9 +95,19 @@ Ableton Link.
 
 ## Architecture notes (for future work)
 
-- **Threading:** the `JSVirtualMachine` lives on a dedicated JS thread;
-  CoreMIDI receive callbacks only enqueue into a ring buffer. All JS access
-  (events, timer ticks, config reloads) stays on that one thread.
+- **Threading (as implemented):** all JS access is confined to one serial
+  GCD queue (`midimend.js`, userInteractive QoS) — incoming events hop onto
+  it from the CoreMIDI receive thread; idle timer, file watchers, reloads,
+  and `sendAfterMilliseconds` target the same queue. System real-time
+  messages bypass the queue (passed through on the receive thread;
+  thread-safe, may reorder slightly vs. processed events).
+  **Revisit at v1:** the ~3 ms `ProcessMIDI` tick and beat scheduler are
+  jitter-sensitive; consider a dedicated JS thread owning a run loop —
+  JSC registers GC-housekeeping timers on the VM-creating thread's run
+  loop, which never fires on a GCD worker, so GC currently runs
+  synchronously on allocation thresholds (sub-ms at our heap sizes,
+  harmless today) — and only add a lock-free receive ring if measurement
+  says the dispatch hop matters.
 - **Port persistence:** set `kMIDIPropertyUniqueID` on virtual ports so other
   apps' saved connections re-bind across restarts.
 - **Receiver-side suppression:** CoreMIDI has no exclusive capture; DAWs must
