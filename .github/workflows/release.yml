@@ -1,0 +1,96 @@
+name: Release
+
+# Builds, signs, and notarizes the single-file universal binary on every
+# version tag, then attaches it to a GitHub release.
+#
+# Required repository secrets (Apple Developer Program membership):
+#   DEVELOPER_ID_CERT_P12        base64 of the "Developer ID Application" .p12
+#   DEVELOPER_ID_CERT_PASSWORD   password of that .p12
+#   NOTARY_API_KEY_P8            App Store Connect API key (.p8 contents)
+#   NOTARY_API_KEY_ID            its key ID
+#   NOTARY_API_ISSUER_ID         its issuer ID
+#
+# A bare executable cannot have the notarization ticket stapled;
+# Gatekeeper fetches it online. (Ship a .pkg/.dmg if offline install
+# ever matters.)
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: macos-15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      # Per-arch native-SwiftPM builds + lipo: the combined
+      # `--arch arm64 --arch x86_64` form routes through the Xcode build
+      # system, which does not support the embedInCode resource rule.
+      - name: Build universal binary
+        run: |
+          swift build -c release --triple arm64-apple-macosx
+          swift build -c release --triple x86_64-apple-macosx
+          lipo -create -output midimend \
+            .build/arm64-apple-macosx/release/midimend \
+            .build/x86_64-apple-macosx/release/midimend
+
+      - name: Check the binary version against the tag
+        run: |
+          BUILT="$(./midimend --version)"
+          if [ "$BUILT" != "midimend ${GITHUB_REF_NAME#v}" ]; then
+            echo "tag is $GITHUB_REF_NAME but the binary says: $BUILT" >&2
+            echo "bump midimendVersion in Sources/midimend-cli/main.swift" >&2
+            exit 1
+          fi
+
+      - name: Import Developer ID certificate
+        env:
+          CERT_P12: ${{ secrets.DEVELOPER_ID_CERT_P12 }}
+          CERT_PASSWORD: ${{ secrets.DEVELOPER_ID_CERT_PASSWORD }}
+        run: |
+          echo "$CERT_P12" | base64 -d > cert.p12
+          security create-keychain -p ci build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p ci build.keychain
+          security import cert.p12 -k build.keychain -P "$CERT_PASSWORD" \
+            -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple: -s -k ci \
+            build.keychain
+          rm cert.p12
+
+      - name: Sign (hardened runtime + JIT entitlement for JavaScriptCore)
+        run: |
+          codesign --force --options runtime --timestamp \
+            --entitlements packaging/midimend.entitlements \
+            --sign "Developer ID Application" \
+            midimend
+
+      - name: Notarize
+        env:
+          NOTARY_API_KEY_P8: ${{ secrets.NOTARY_API_KEY_P8 }}
+          NOTARY_API_KEY_ID: ${{ secrets.NOTARY_API_KEY_ID }}
+          NOTARY_API_ISSUER_ID: ${{ secrets.NOTARY_API_ISSUER_ID }}
+        run: |
+          echo "$NOTARY_API_KEY_P8" > notary-key.p8
+          ditto -c -k midimend notarize.zip
+          xcrun notarytool submit notarize.zip \
+            --key notary-key.p8 --key-id "$NOTARY_API_KEY_ID" \
+            --issuer "$NOTARY_API_ISSUER_ID" --wait
+          rm notary-key.p8
+
+      - name: Package release zip
+        run: |
+          STAGE="midimend-$GITHUB_REF_NAME"
+          mkdir -p "$STAGE"
+          cp midimend "$STAGE/"
+          cp README.md LICENSE packaging/midimend.1 "$STAGE/"
+          cp -R examples packaging/completions "$STAGE/"
+          ditto -c -k --keepParent "$STAGE" "$STAGE-macos.zip"
+
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" midimend-*-macos.zip --generate-notes

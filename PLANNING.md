@@ -55,31 +55,41 @@ as few surprises as possible, and problems must be easy to diagnose.
      app-managed files, not hand-edited documents. Bare `midimend` (and
      thus the brew service) runs this config and prints a
      create-it-like-this message when it is missing.
-   - **Formula draft:** `packaging/midimend.rb`. Binary and its resource
-     bundle (Bootstrap.js) must be installed side by side — the SwiftPM
-     `Bundle.module` accessor looks next to the real executable and its
-     other fallback is a baked-in absolute build path that only exists on
-     the build machine — hence libexec + a bin exec-script shim.
-     `keep_alive crashed: true` restarts after crashes but not after
-     deliberate exits (missing config), avoiding a respawn loop.
-     Verified locally in a fake cellar layout. CI: `.github/workflows/ci.yml`.
-   - **Remaining (needs Michael):** push the repo, tag `v0.1.0`, fill the
-     formula's sha256 from the tag tarball, create the tap repo, move the
-     formula there.
-   - **Signing:** skipped for now, but to be set up as soon as midimend is
-     distributed via homebrew — not strictly required for a from-source
-     formula (curl-downloaded files carry no quarantine attribute, so
-     Gatekeeper never evaluates them), but a matter of courtesy towards
-     users. Recipe: sign with a "Developer ID Application" certificate
-     (`codesign --options runtime --timestamp` + entitlements file), then
-     notarize (`xcrun notarytool submit --wait`). Hardened runtime blocks
-     JavaScriptCore's JIT; add the `com.apple.security.cs.allow-jit`
-     entitlement (without it JSC silently falls back to the interpreter —
-     harmless at MIDI rates, but the entitlement is the clean fix). A bare
-     executable/zip cannot be stapled; Gatekeeper fetches the notarization
-     ticket online, or ship a `.pkg`/`.dmg` if offline install matters.
-     Natural home: a GitHub Actions release workflow, signing between
-     build and upload.
+   - **Single-file binary:** Bootstrap.js is compiled into the executable
+     (SwiftPM `.embedInCode`), so there is no resource bundle to ship for
+     *any* install method — one Mach-O to install, sign, and notarize.
+     Caveat: the combined `--arch arm64 --arch x86_64` build routes
+     through the Xcode build system, which doesn't support `.embedInCode`;
+     universal binaries are built per-arch with `--triple` and merged
+     with `lipo` (done this way in the release workflow).
+   - **Formula draft:** `packaging/midimend.rb` — installs the binary, man
+     page (`packaging/midimend.1`), and zsh/bash completions
+     (`packaging/completions/`). `keep_alive crashed: true` restarts after
+     crashes but not after deliberate exits (missing config), avoiding a
+     respawn loop. CI: `.github/workflows/ci.yml`.
+   - **Binary release:** `.github/workflows/release.yml` builds a
+     universal binary on every `v*` tag, checks it against
+     `midimendVersion` (in main.swift — bump per release; `--version`
+     flag), signs, notarizes, and attaches a zip to a GitHub release.
+   - **Remaining (needs Michael):** push the repo; tag `v0.1.0`; fill the
+     formula's sha256 from the tag tarball; create the tap repo and move
+     the formula there. For the notarized release: Apple Developer
+     Program membership, a "Developer ID Application" certificate, an
+     App Store Connect API key, and the five repo secrets named at the
+     top of release.yml.
+   - **Signing:** implemented in `.github/workflows/release.yml` (waiting
+     on certificates/secrets, see above) — not strictly required for a
+     from-source formula (curl-downloaded files carry no quarantine
+     attribute, so Gatekeeper never evaluates them), but a matter of
+     courtesy towards users. Sign with a "Developer ID Application"
+     certificate (`codesign --options runtime --timestamp` + entitlements
+     file), then notarize (`xcrun notarytool submit --wait`). Hardened
+     runtime blocks JavaScriptCore's JIT; `packaging/midimend.entitlements`
+     carries `com.apple.security.cs.allow-jit` (without it JSC silently
+     falls back to the interpreter — harmless at MIDI rates, but the
+     entitlement is the clean fix). A bare executable/zip cannot be
+     stapled; Gatekeeper fetches the notarization ticket online, or ship
+     a `.pkg`/`.dmg` if offline install matters.
 
 ## v1 — timing
 

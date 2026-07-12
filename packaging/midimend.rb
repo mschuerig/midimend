@@ -15,12 +15,10 @@ class Midimend < Formula
 
   def install
     system "swift", "build", "--disable-sandbox", "-c", "release"
-    # The executable loads Bootstrap.js from a resource bundle looked up
-    # next to the real binary, so both live in libexec and bin gets a shim
-    # (a bin symlink would leave the bundle unfound).
-    libexec.install ".build/release/midimend",
-                    ".build/release/midimend_Midimend.bundle"
-    bin.write_exec_script libexec/"midimend"
+    bin.install ".build/release/midimend"
+    man1.install "packaging/midimend.1"
+    zsh_completion.install "packaging/completions/_midimend"
+    bash_completion.install "packaging/completions/midimend.bash" => "midimend"
     pkgshare.install "examples"
   end
 

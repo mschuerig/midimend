@@ -1,0 +1,67 @@
+.Dd July 12, 2026
+.Dt MIDIMEND 1
+.Os
+.Sh NAME
+.Nm midimend
+.Nd mend MIDI between CoreMIDI ports with a JavaScript script
+.Sh SYNOPSIS
+.Nm
+.Op Ar config.json
+.Nm
+.Fl \-list\-devices
+.Op Ar config.json
+.Nm
+.Fl \-init
+.Ar script.js
+.Sh DESCRIPTION
+.Nm
+connects to MIDI sources, runs a JavaScript processing script per event,
+and emits the mended stream on a virtual output port that a DAW uses as
+its input.
+Scripts use the same JavaScript API as the Scripter MIDI plug-in.
+.Pp
+Without arguments,
+.Nm
+runs the config at
+.Pa ~/Music/Midimend/config.json .
+Config and script files are watched; saving either hot-reloads the
+script.
+Changing the config's
+.Ql midi
+section requires a restart.
+.Pp
+The options are as follows:
+.Bl -tag -width Fl
+.It Fl \-list\-devices Op Ar config.json
+Print the MIDI devices currently present.
+Given a config, also show which devices its
+.Ql hardware
+entries match, which are ignored, and which entries match nothing.
+.It Fl \-init Ar script.js
+Print a config skeleton for the script to stdout, with the defaults from
+its
+.Ql PluginParameters
+filled in.
+Script warnings go to stderr, so the JSON can be redirected to a file.
+.It Fl h , Fl \-help
+Print usage.
+.El
+.Sh FILES
+.Bl -tag -width Pa
+.It Pa ~/Music/Midimend/config.json
+Default config, used when
+.Nm
+is started without arguments (as
+.Ql brew services start midimend
+does).
+.El
+.Sh EXAMPLES
+Start a config for a script, then see what is connected:
+.Bd -literal -offset indent
+midimend --init myscript.js > ~/Music/Midimend/config.json
+midimend --list-devices ~/Music/Midimend/config.json
+midimend
+.Ed
+.Sh SEE ALSO
+README and script API notes:
+.Lk https://github.com/mschuerig/midimend

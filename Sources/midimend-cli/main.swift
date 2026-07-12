@@ -3,6 +3,9 @@ import Midimend
 
 let arguments = Array(CommandLine.arguments.dropFirst())
 
+/// Bumped per release; the release workflow refuses tags that don't match.
+let midimendVersion = "0.1.0"
+
 func printUsage() {
     print("""
     usage: midimend [config.json]
@@ -19,6 +22,7 @@ func printUsage() {
     --init          print a config skeleton for the script, with its
                     PluginParameters defaults filled in (redirect to a file:
                     midimend --init script.js > config.json)
+    --version       print the version
     """)
 }
 
@@ -108,6 +112,9 @@ case nil:
     configPath = defaultURL.path
 case "-h", "--help":
     printUsage()
+    exit(0)
+case "--version":
+    print("midimend \(midimendVersion)")
     exit(0)
 case "--list-devices":
     guard arguments.count <= 2 else {
