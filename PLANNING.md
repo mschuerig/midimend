@@ -167,7 +167,12 @@ Ableton Link.
   coalescing). Measurement exists: `--measure` runs
   normally and prints added-latency percentiles (driver receipt → script
   entry / → processing done) every 10 s, from the driver-receipt
-  timestamps CoreMIDI puts on incoming packets.
+  timestamps CoreMIDI puts on incoming packets. Measured baseline
+  (2026-07-12, debug build, MiniLab live): queue hop p50 ≈ 70–140µs,
+  worst p99 352µs; total p50 ≈ 200–420µs, p99 < 550µs, one-off 1.2ms
+  max in the first window (JIT warmup). An order of magnitude below the
+  ~1ms USB-MIDI frame — no receive ring or dedicated thread warranted
+  before the v1 tick.
 - **Port persistence (implemented):** virtual ports get a stable
   `kMIDIPropertyUniqueID` (name hash) so other apps' saved connections
   re-bind across restarts; on collision CoreMIDI keeps its random ID.
