@@ -8,6 +8,9 @@
 .Nm
 .Op Ar config.json
 .Nm
+.Fl \-measure
+.Op Ar config.json
+.Nm
 .Fl \-list\-devices
 .Op Ar config.json
 .Nm
@@ -32,6 +35,12 @@ section requires a restart.
 .Pp
 The options are as follows:
 .Bl -tag -width Fl
+.It Fl \-measure Op Ar config.json
+Run normally, additionally printing
+.Nm Ns 's
+added latency every 10 seconds: percentiles from MIDI driver receipt to
+script entry (the queue hop) and to processing done (any resulting events
+sent).
 .It Fl \-list\-devices Op Ar config.json
 Print the MIDI devices currently present.
 Given a config, also show which devices its

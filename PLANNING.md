@@ -158,7 +158,10 @@ Ableton Link.
   loop, which never fires on a GCD worker, so GC currently runs
   synchronously on allocation thresholds (sub-ms at our heap sizes,
   harmless today) — and only add a lock-free receive ring if measurement
-  says the dispatch hop matters.
+  says the dispatch hop matters. Measurement exists: `--measure` runs
+  normally and prints added-latency percentiles (driver receipt → script
+  entry / → processing done) every 10 s, from the driver-receipt
+  timestamps CoreMIDI puts on incoming packets.
 - **Port persistence (implemented):** virtual ports get a stable
   `kMIDIPropertyUniqueID` (name hash) so other apps' saved connections
   re-bind across restarts; on collision CoreMIDI keeps its random ID.

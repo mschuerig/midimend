@@ -14,6 +14,7 @@ let midimendVersion = "0.1.1"
 func printUsage() {
     print("""
     usage: midimend [config.json]
+           midimend --measure [config.json]
            midimend --list-devices [config.json]
            midimend --init <script.js>
 
@@ -22,6 +23,9 @@ func printUsage() {
 
     Without arguments, runs the config at \(Config.defaultURL.path).
 
+    --measure       run normally, printing midimend's added latency every
+                    10 seconds (percentiles from MIDI driver receipt to
+                    script entry and to processing done)
     --list-devices  print the MIDI devices currently present; given a config,
                     also show which of them its "hardware" entries match
     --init          print a config skeleton for the script, with its
@@ -98,10 +102,7 @@ func initTemplate(scriptPath: String) throws {
     print(ConfigTemplate.render(scriptPath: scriptPath, parameters: engine.parameters))
 }
 
-let configPath: String
-
-switch arguments.first {
-case nil:
+func defaultConfigPath() -> String {
     let defaultURL = Config.defaultURL
     guard FileManager.default.fileExists(atPath: defaultURL.path) else {
         FileHandle.standardError.write(Data("""
@@ -114,7 +115,22 @@ case nil:
         """.utf8))
         exit(1)
     }
-    configPath = defaultURL.path
+    return defaultURL.path
+}
+
+let configPath: String
+var measure = false
+
+switch arguments.first {
+case nil:
+    configPath = defaultConfigPath()
+case "--measure":
+    guard arguments.count <= 2 else {
+        printUsage()
+        exit(1)
+    }
+    measure = true
+    configPath = arguments.count == 2 ? arguments[1] : defaultConfigPath()
 case "-h", "--help":
     printUsage()
     exit(0)
@@ -156,7 +172,7 @@ default:
 
 let engine: Engine
 do {
-    engine = try Engine(configPath: configPath)
+    engine = try Engine(configPath: configPath, measure: measure)
     try engine.start()
     print("midimend running — Ctrl-C to quit")
 } catch {

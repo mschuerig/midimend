@@ -15,16 +15,33 @@ public final class Engine: @unchecked Sendable {
     private var idleTimer: DispatchSourceTimer?
     private var watchers: [DispatchSourceFileSystemObject] = []
     private var reloadScheduled = false
+    private var latencyStats: LatencyStats?  // touched on jsQueue only
+    private var idleTicks = 0
 
-    public init(configPath: String) throws {
+    public init(configPath: String, measure: Bool = false) throws {
         self.configURL = URL(fileURLWithPath: configPath).standardizedFileURL
         self.config = try Config.load(from: configURL)
+        if measure { self.latencyStats = LatencyStats() }
     }
 
     public func start() throws {
-        let midi = try MIDIIO(setup: config.midi, receive: { [weak self] bytes, port in
+        let midi = try MIDIIO(setup: config.midi, receive: { [weak self] bytes, port, driverTime in
             guard let self else { return }
-            self.jsQueue.async { self.scriptEngine?.handleIncoming(bytes, port: port) }
+            self.jsQueue.async {
+                if self.latencyStats == nil {
+                    self.scriptEngine?.handleIncoming(bytes, port: port)
+                } else {
+                    let entry = mach_absolute_time()
+                    self.scriptEngine?.handleIncoming(bytes, port: port)
+                    let done = mach_absolute_time()
+                    // Future-stamped events (apps scheduling ahead) would go
+                    // negative; clamp to zero.
+                    self.latencyStats?.record(
+                        hopNanos: Self.nanoseconds(entry > driverTime ? entry - driverTime : 0),
+                        totalNanos: Self.nanoseconds(done > driverTime ? done - driverTime : 0)
+                    )
+                }
+            }
         })
         self.midi = midi
         try jsQueue.sync {
@@ -59,7 +76,14 @@ public final class Engine: @unchecked Sendable {
     private func startIdleTimer() {
         let timer = DispatchSource.makeTimerSource(queue: jsQueue)
         timer.schedule(deadline: .now() + 0.25, repeating: 0.25, leeway: .milliseconds(50))
-        timer.setEventHandler { [weak self] in self?.scriptEngine?.idleTick() }
+        timer.setEventHandler { [weak self] in
+            guard let self else { return }
+            self.scriptEngine?.idleTick()
+            self.idleTicks += 1
+            if self.idleTicks % 40 == 0, let line = self.latencyStats?.summarizeAndReset() {
+                print(line)
+            }
+        }
         timer.resume()
         idleTimer = timer
     }
@@ -107,5 +131,17 @@ public final class Engine: @unchecked Sendable {
         }
         // Re-arm: atomic saves replace the file, invalidating watched descriptors.
         installWatchers()
+    }
+
+    // MARK: - Host-time conversion (for --measure)
+
+    private static let timebase: (numer: UInt64, denom: UInt64) = {
+        var info = mach_timebase_info_data_t()
+        mach_timebase_info(&info)
+        return (UInt64(info.numer), UInt64(info.denom))
+    }()
+
+    private static func nanoseconds(_ ticks: UInt64) -> UInt64 {
+        ticks * timebase.numer / timebase.denom
     }
 }

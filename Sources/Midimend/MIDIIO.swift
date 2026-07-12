@@ -8,8 +8,11 @@ import CoreMIDI
 /// CoreMIDI-owned thread; the caller is responsible for hopping onto its own
 /// processing queue. System real-time/common messages (clock, start/stop,
 /// song position) are passed straight through to the outputs.
+///
+/// `receive` gets the packet's driver-receipt host time (`mach_absolute_time`
+/// units) so the caller can measure its own added latency.
 public final class MIDIIO: @unchecked Sendable {
-    public typealias ReceiveHandler = @Sendable (MIDIEventBytes, Int) -> Void
+    public typealias ReceiveHandler = @Sendable (MIDIEventBytes, Int, UInt64) -> Void
 
     private var client = MIDIClientRef()
     private var inputPort = MIDIPortRef()
@@ -105,6 +108,10 @@ public final class MIDIIO: @unchecked Sendable {
 
     private func handle(_ eventList: UnsafePointer<MIDIEventList>) {
         for packetPointer in eventList.unsafeSequence() {
+            // A zero timestamp means "now" (typical for apps sending to our
+            // virtual input); substitute the actual receipt time.
+            var timestamp = packetPointer.pointee.timeStamp
+            if timestamp == 0 { timestamp = mach_absolute_time() }
             let wordCount = Int(packetPointer.pointee.wordCount)
             let words = withUnsafeBytes(of: packetPointer.pointee.words) { raw in
                 Array(raw.bindMemory(to: UInt32.self).prefix(wordCount))
@@ -112,7 +119,7 @@ public final class MIDIIO: @unchecked Sendable {
             for action in MIDI1UMP.parse(words) {
                 switch action {
                 case .channelVoice(let bytes):
-                    receive(bytes, 1)
+                    receive(bytes, 1, timestamp)
                 case .passThrough(let word):
                     sendWords([word])
                 }

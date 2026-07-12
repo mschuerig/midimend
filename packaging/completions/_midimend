@@ -2,6 +2,7 @@
 
 _arguments \
   '(- 1)'{-h,--help}'[print usage]' \
+  '(- 1)--measure[run with latency statistics every 10 seconds]::config file:_files -g "*.json"' \
   '(- 1)--list-devices[print MIDI devices, annotated from a config]::config file:_files -g "*.json"' \
   '(- 1)--init[print a config skeleton for a script]:script file:_files -g "*.js"' \
   '1:config file:_files -g "*.json"'

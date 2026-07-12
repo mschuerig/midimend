@@ -8,7 +8,7 @@ _midimend() {
             ;;
     esac
     if [[ $cur == -* ]]; then
-        COMPREPLY=($(compgen -W '--help --list-devices --init' -- "$cur"))
+        COMPREPLY=($(compgen -W '--help --measure --list-devices --init' -- "$cur"))
     else
         COMPREPLY=($(compgen -o plusdirs -f -X '!*.json' -- "$cur"))
     fi
