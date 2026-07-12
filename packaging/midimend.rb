@@ -26,9 +26,13 @@ class Midimend < Formula
 
   # Starts at login; `crashed: true` restarts after crashes but not after
   # deliberate exits (e.g. missing config), avoiding a respawn loop.
+  # `:interactive` keeps launchd from putting the process in a background
+  # tier, where Darwin coarsens timer leeway and scheduling — milliseconds
+  # of jitter for a MIDI processor.
   service do
     run opt_bin/"midimend"
     keep_alive crashed: true
+    process_type :interactive
     log_path var/"log/midimend.log"
     error_log_path var/"log/midimend.log"
   end
