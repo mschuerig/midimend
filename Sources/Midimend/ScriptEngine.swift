@@ -95,6 +95,12 @@ public final class ScriptEngine: @unchecked Sendable {
 
     public func idleTick() {
         idleFn?.call(withArguments: [])
+        // JSC registers its GC housekeeping timers on the run loop of the
+        // VM-creating thread, and run loops never spin on a GCD worker — so
+        // left alone, collection only happens synchronously when an
+        // allocation threshold is hit, possibly mid-HandleMIDI. Collecting
+        // here keeps the heap small enough that that rarely triggers.
+        JSGarbageCollect(context.jsGlobalContextRef)
     }
 
     public func currentValue(named name: String) -> Double? {

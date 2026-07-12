@@ -155,10 +155,16 @@ Ableton Link.
   **Revisit at v1:** the ~3 ms `ProcessMIDI` tick and beat scheduler are
   jitter-sensitive; consider a dedicated JS thread owning a run loop —
   JSC registers GC-housekeeping timers on the VM-creating thread's run
-  loop, which never fires on a GCD worker, so GC currently runs
-  synchronously on allocation thresholds (sub-ms at our heap sizes,
-  harmless today) — and only add a lock-free receive ring if measurement
-  says the dispatch hop matters. Measurement exists: `--measure` runs
+  loop, which never fires on a GCD worker, so without intervention GC
+  runs synchronously on allocation thresholds (sub-ms at our heap sizes;
+  mitigated: the idle tick now calls `JSGarbageCollect` every 250 ms, so
+  collection happens in idle time and thresholds are rarely hit
+  mid-event) — and only add a lock-free receive ring if measurement
+  says the dispatch hop matters. Also done in v0.x: the brew service
+  runs as launchd `ProcessType Interactive` (background tiers coarsen
+  timer leeway and scheduling), and `sendAfterMilliseconds` uses a
+  strict zero-leeway timer instead of `asyncAfter` (which permits
+  coalescing). Measurement exists: `--measure` runs
   normally and prints added-latency percentiles (driver receipt → script
   entry / → processing done) every 10 s, from the driver-receipt
   timestamps CoreMIDI puts on incoming packets.

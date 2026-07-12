@@ -169,6 +169,27 @@ final class ScriptEngineTests: XCTestCase {
         XCTAssertEqual(recorder.sent.last, MIDIEventBytes(status: 0xBF, data1: 123, data2: 0))
     }
 
+    // idleTick also collects garbage; live state must survive collections.
+    func testIdleTickRunsIdleCallbackAndPreservesLiveState() throws {
+        let recorder = Recorder()
+        let engine = try makeEngine("""
+            var held = { pitch: 60 };
+            var idles = 0;
+            function Idle() {
+                idles++;
+                var garbage = [];
+                for (var i = 0; i < 10000; i++) garbage.push({ i: i });
+            }
+            function HandleMIDI(event) {
+                event.pitch = held.pitch + idles;
+                event.send();
+            }
+            """, recorder: recorder)
+        for _ in 0..<5 { engine.idleTick() }
+        engine.handleIncoming(MIDIEventBytes(status: 0x90, data1: 0, data2: 100))
+        XCTAssertEqual(recorder.sent, [MIDIEventBytes(status: 0x90, data1: 65, data2: 100)])
+    }
+
     func testScriptSyntaxErrorThrows() {
         let recorder = Recorder()
         XCTAssertThrowsError(try makeEngine("function HandleMIDI(event) {", recorder: recorder))
