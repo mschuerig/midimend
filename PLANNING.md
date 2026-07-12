@@ -67,18 +67,24 @@ as few surprises as possible, and problems must be easy to diagnose.
      (`packaging/completions/`). `keep_alive crashed: true` restarts after
      crashes but not after deliberate exits (missing config), avoiding a
      respawn loop. CI: `.github/workflows/ci.yml`.
-   - **Binary release:** `.github/workflows/release.yml` builds a
-     universal binary on every `v*` tag, checks it against
+   - **Binary release:** `packaging/release.sh`, run locally against a
+     pushed tag — builds the universal binary, checks it against
      `midimendVersion` (in main.swift — bump per release; `--version`
-     flag), signs, notarizes, and attaches a zip to a GitHub release.
+     flag), signs, notarizes, and publishes a GitHub release with the
+     zip. Decided: signing stays local — CI signing was drafted and
+     discarded because anything that can run a workflow in the repo can
+     read its secrets, and exporting the Developer ID key to GitHub
+     widens its exposure from "this Mac" to "the GitHub account". CI
+     (`ci.yml`) builds and tests only and holds no secrets.
    - **Remaining (needs Michael):** push the repo; tag `v0.1.0`; fill the
      formula's sha256 from the tag tarball; create the tap repo and move
-     the formula there. For the notarized release: Apple Developer
-     Program membership, a "Developer ID Application" certificate, an
-     App Store Connect API key, and the five repo secrets named at the
-     top of release.yml.
-   - **Signing:** implemented in `.github/workflows/release.yml` (waiting
-     on certificates/secrets, see above) — not strictly required for a
+     the formula there. For the notarized release (one-time setup, see
+     release.sh header): a "Developer ID Application" certificate — a
+     different type than the App Store's Apple Distribution certificate,
+     account holder only — and an App Store Connect API key (Developer
+     role) stored via `notarytool store-credentials`.
+   - **Signing:** implemented in `packaging/release.sh` (waiting on the
+     certificate/API-key setup, see above) — not strictly required for a
      from-source formula (curl-downloaded files carry no quarantine
      attribute, so Gatekeeper never evaluates them), but a matter of
      courtesy towards users. Sign with a "Developer ID Application"
