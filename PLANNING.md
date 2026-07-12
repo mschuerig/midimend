@@ -45,10 +45,14 @@ as few surprises as possible, and problems must be easy to diagnose.
      `--list-devices`, which shows what is matched and ignored. The rules
      live in `EndpointSelection` (pure, unit-tested; shared by MIDIIO and
      `--list-devices`).
-5. **Publish.** GitHub repo `midimend` (done); license: No-Rights-Reserved
-   (done); homebrew formula in `mschuerig/homebrew-tap` building from
-   source, with a `service` block so `brew services start midimend`
-   answers "how does the app run" (starts at login, restarts on crash).
+5. **Publish.** (done — v0.1.1 live 2026-07-12) GitHub repo `midimend`;
+   license: No-Rights-Reserved; homebrew formula in
+   `mschuerig/homebrew-tap` building from source, with a `service` block
+   so `brew services start midimend` answers "how does the app run"
+   (starts at login, restarts on crash). Release process per version:
+   bump `midimendVersion`, tag, `packaging/release.sh vX.Y.Z`, rev
+   url+sha256 in `packaging/midimend.rb`, copy to `~/Projekte/homebrew-tap`
+   (Michael's clone — never the brew-managed tap dir), push.
    - **Config home (decided):** `~/Music/Midimend/config.json` — visible
      in Finder and musician-idiomatic (like `~/Music/Audio Music Apps`);
      `~/Library/Application Support` rejected because it is meant for
@@ -76,22 +80,13 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
-   - **Status (2026-07-12):** v0.1.0 released — repo pushed, tagged,
-     signed (Developer ID G2 cert, valid to 2031), notarized (Accepted),
-     GitHub release published via release.sh. Formula finalized with the
-     tag's sha256 and committed to the existing `mschuerig/homebrew-tap`
-     (local clone); verified end to end: `brew install --build-from-source
-     mschuerig/tap/midimend`, `brew test`, `brew audit --strict` all
-     clean, man page and completions installed. Smoke-tested for real:
-     `~/Music/Midimend/` set up from the example, `brew services start
-     midimend` runs, virtual ports visible system-wide, MiniLab
-     connected. The smoke test caught a bug: under launchd stdout is
-     fully buffered, so the service log stayed empty and SIGTERM would
-     discard it — fixed with setlinebuf(stdout) in main.swift; ships
-     with the next release (installed v0.1.0 still has it; logs appear
-     only after ~4 KB of output). Remaining: push the tap commit, and
-     verify in MainStage that a saved connection to "Midimend Out"
-     re-binds across a midimend restart (port persistence).
+   - **Status:** v0.1.1 (2026-07-12) is the released state — signed
+     (Developer ID G2 cert, valid to 2031), notarized, brew-installed
+     and running as a service on Michael's machine with the MiniLab
+     connected and the service log confirmed working (v0.1.0's stdout
+     buffering bug fixed). MainStage picks up "Midimend Out"; the
+     saved-connection re-bind across a midimend restart hasn't been
+     explicitly exercised yet.
    - **Signing:** implemented in `packaging/release.sh` (waiting on the
      certificate/API-key setup, see above) — not strictly required for a
      from-source formula (curl-downloaded files carry no quarantine
