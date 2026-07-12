@@ -76,13 +76,16 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
-   - **Remaining (needs Michael):** push the repo; tag `v0.1.0`; fill the
-     formula's sha256 from the tag tarball; create the tap repo and move
-     the formula there. For the notarized release (one-time setup, see
-     release.sh header): a "Developer ID Application" certificate — a
-     different type than the App Store's Apple Distribution certificate,
-     account holder only — and an App Store Connect API key (Developer
-     role) stored via `notarytool store-credentials`.
+   - **Status (2026-07-12):** v0.1.0 released — repo pushed, tagged,
+     signed (Developer ID G2 cert, valid to 2031), notarized (Accepted),
+     GitHub release published via release.sh. Formula finalized with the
+     tag's sha256 and committed to the existing `mschuerig/homebrew-tap`
+     (local clone); verified end to end: `brew install --build-from-source
+     mschuerig/tap/midimend`, `brew test`, `brew audit --strict` all
+     clean, man page and completions installed. Remaining: push the tap
+     commit; then `brew install mschuerig/tap/midimend` works for
+     everyone. Consider `brew services start midimend` smoke test after
+     creating ~/Music/Midimend/config.json.
    - **Signing:** implemented in `packaging/release.sh` (waiting on the
      certificate/API-key setup, see above) — not strictly required for a
      from-source formula (curl-downloaded files carry no quarantine

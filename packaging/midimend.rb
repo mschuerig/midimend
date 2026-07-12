@@ -1,12 +1,14 @@
-# Draft — the published copy lives in mschuerig/homebrew-tap as
-# Formula/midimend.rb. Before it works there:
-#   1. push the midimend repo and tag a release (the `url` below),
-#   2. fill in sha256:  curl -L <url> | shasum -a 256
+# typed: strict
+# frozen_string_literal: true
+
+# The published copy lives in mschuerig/homebrew-tap as
+# Formula/midimend.rb. On new releases: bump `url`, refresh `sha256`
+# (curl -L <url> | shasum -a 256), and copy to the tap.
 class Midimend < Formula
   desc "Mend your MIDI before the DAW sees it"
   homepage "https://github.com/mschuerig/midimend"
   url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.1.0.tar.gz"
-  sha256 "REPLACE-AFTER-TAGGING"
+  sha256 "3ad08f12ba182f61cea98ea707e8a0356564661e5dec6d07b07a76e46d2b427a"
   license :public_domain
   head "https://github.com/mschuerig/midimend.git", branch: "main"
 
