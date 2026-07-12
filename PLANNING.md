@@ -49,10 +49,16 @@ as few surprises as possible, and problems must be easy to diagnose.
    license: No-Rights-Reserved; homebrew formula in
    `mschuerig/homebrew-tap` building from source, with a `service` block
    so `brew services start midimend` answers "how does the app run"
-   (starts at login, restarts on crash). Release process per version:
-   bump `midimendVersion`, tag, `packaging/release.sh vX.Y.Z`, rev
-   url+sha256 in `packaging/midimend.rb`, copy to `~/Projekte/homebrew-tap`
-   (Michael's clone — never the brew-managed tap dir), push.
+   (starts at login, restarts on crash). Release process per version
+   (two commands, two pushes): `packaging/release.sh prepare vX.Y.Z`
+   (tests, bump, commit) → `git push` →
+   `packaging/release.sh publish vX.Y.Z` (build, sign, notarize, GitHub
+   release minting the tag via `--target`, formula rev, sync of
+   `~/Projekte/homebrew-tap` — Michael's clone, never the brew-managed
+   tap dir) → push the tap (the release-critical push; the formula-rev
+   commit here rides with the next ordinary push). If publish fails
+   after the GitHub release exists: `packaging/release.sh formula
+   vX.Y.Z` finishes the rest.
    - **Config home (decided):** `~/Music/Midimend/config.json` — visible
      in Finder and musician-idiomatic (like `~/Music/Audio Music Apps`);
      `~/Library/Application Support` rejected because it is meant for
