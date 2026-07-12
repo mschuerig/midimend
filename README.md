@@ -40,6 +40,17 @@ swift build -c release
 
 Requires macOS 13+. No entitlements or permissions needed.
 
+To see what's connected — and, given a config, what it matches:
+
+```sh
+.build/release/midimend --list-devices
+.build/release/midimend --list-devices examples/config.example.json
+```
+
+If a configured device isn't present at startup, midimend warns and lists
+the devices that are, then connects the device automatically when it
+appears.
+
 ## Configuration
 
 ```jsonc

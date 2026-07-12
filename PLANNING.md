@@ -9,9 +9,11 @@ as few surprises as possible, and problems must be easy to diagnose.
 
 ## Now (v0.x) — toward a first release
 
-1. **Diagnosis basics.** A device-listing command (`--list-devices` or
-   `doctor`); when a configured device isn't found, print the devices that
-   *are* present instead of failing bare.
+1. **Diagnosis basics.** (done) `--list-devices [config.json]` prints the
+   endpoints present, marks the ones the config's `hardware` entries match,
+   and flags entries that match nothing; at startup, a configured device
+   that isn't found produces a warning listing the devices that *are*
+   present (it still connects automatically when it appears).
 2. **Config template generation.** `midimend --init script.js` evaluates the
    script's `PluginParameters` and prints a config skeleton with defaults
    filled in.

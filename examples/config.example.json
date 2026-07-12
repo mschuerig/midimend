@@ -2,7 +2,7 @@
   "script": "minilab-mainknob.js",
   "midi": {
     "inputs": [
-      { "hardware": "MiniLab37 MIDI" },
+      { "hardware": "Minilab37 MIDI" },
       { "virtual": "Midimend In" }
     ],
     "outputs": [

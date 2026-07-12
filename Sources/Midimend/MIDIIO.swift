@@ -71,6 +71,7 @@ public final class MIDIIO: @unchecked Sendable {
         }
 
         refreshHardwareEndpoints()
+        reportMissingHardware()
     }
 
     deinit {
@@ -153,7 +154,7 @@ public final class MIDIIO: @unchecked Sendable {
         for index in 0..<MIDIGetNumberOfSources() {
             let source = MIDIGetSource(index)
             guard source != 0, !virtualSources.contains(source),
-                  let name = displayName(source),
+                  let name = midiDisplayName(source),
                   matches(name, patterns: hardwareInputPatterns) else { continue }
             var uniqueID: MIDIUniqueID = 0
             MIDIObjectGetIntegerProperty(source, kMIDIPropertyUniqueID, &uniqueID)
@@ -177,7 +178,7 @@ public final class MIDIIO: @unchecked Sendable {
         for index in 0..<MIDIGetNumberOfDestinations() {
             let destination = MIDIGetDestination(index)
             guard destination != 0, !virtualDestinations.contains(destination),
-                  let name = displayName(destination),
+                  let name = midiDisplayName(destination),
                   matches(name, patterns: hardwareOutputPatterns) else { continue }
             found.append(destination)
             names.append(name)
@@ -191,15 +192,36 @@ public final class MIDIIO: @unchecked Sendable {
         }
     }
 
-    private func matches(_ name: String, patterns: [String]) -> Bool {
-        patterns.contains { name.localizedCaseInsensitiveContains($0) }
+    /// Startup diagnosis: a configured device that isn't present gets a
+    /// warning listing the devices that are. Not an error — the setup-change
+    /// notification connects the device if it appears later.
+    private func reportMissingHardware() {
+        let sourceNames = (0..<MIDIGetNumberOfSources()).compactMap { index -> String? in
+            let source = MIDIGetSource(index)
+            guard source != 0, !virtualSources.contains(source) else { return nil }
+            return midiDisplayName(source)
+        }
+        let destinationNames = (0..<MIDIGetNumberOfDestinations()).compactMap { index -> String? in
+            let destination = MIDIGetDestination(index)
+            guard destination != 0, !virtualDestinations.contains(destination) else { return nil }
+            return midiDisplayName(destination)
+        }
+        warnUnmatched(patterns: hardwareInputPatterns, present: sourceNames, kind: "input")
+        warnUnmatched(patterns: hardwareOutputPatterns, present: destinationNames, kind: "output")
     }
 
-    private func displayName(_ object: MIDIObjectRef) -> String? {
-        var unmanaged: Unmanaged<CFString>?
-        guard MIDIObjectGetStringProperty(object, kMIDIPropertyDisplayName, &unmanaged) == noErr,
-              let value = unmanaged?.takeRetainedValue() else { return nil }
-        return value as String
+    private func warnUnmatched(patterns: [String], present: [String], kind: String) {
+        let missing = patterns.filter { pattern in
+            !present.contains { midiNameMatches($0, pattern: pattern) }
+        }
+        guard !missing.isEmpty else { return }
+        let quoted = missing.map { "\"\($0)\"" }.joined(separator: ", ")
+        let available = present.isEmpty ? "none" : present.joined(separator: ", ")
+        log("warning: no MIDI \(kind) matching \(quoted) — connecting automatically if it appears; present \(kind)s: \(available)")
+    }
+
+    private func matches(_ name: String, patterns: [String]) -> Bool {
+        patterns.contains { midiNameMatches(name, pattern: $0) }
     }
 
     /// A stable unique ID lets other apps' saved connections re-bind to our
