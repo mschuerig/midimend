@@ -20,10 +20,35 @@ as few surprises as possible, and problems must be easy to diagnose.
    hot-plugged devices via the existing setup-change notification; match
    display names as well as endpoint names (users rename devices in
    Audio MIDI Setup).
-4. **Publish.** GitHub repo `midimend`; license: No-Rights-Reserved/CC0 with
-   AI-authorship note; homebrew formula in `mschuerig/homebrew-tap` building
-   from source, with a `service` block so `brew services start midimend`
+   - **Port exclusion:** controllers often expose a second endpoint for DAW
+     control (MCU/HUI + integration scripts), e.g. the MiniLab's
+     "MiniLab37 DAW" next to "MiniLab37 MIDI". These must be ignorable —
+     they talk to the DAW directly and Midimend should neither consume nor
+     forward them. Design: a top-level `"ignore": ["DAW", …]` list (same
+     substring matching as inputs), applied both to explicit input matches
+     (a broad substring like "MiniLab" would otherwise catch both ports)
+     and to the default-all-inputs mode. Decided: no built-in or
+     pre-defined ignore list — exclusion is fully explicit in the config,
+     supported by a `--list-devices` that shows what is connected, matched,
+     and ignored.
+4. **Publish.** GitHub repo `midimend` (done); license: No-Rights-Reserved
+   (done); homebrew formula in `mschuerig/homebrew-tap` building from
+   source, with a `service` block so `brew services start midimend`
    answers "how does the app run" (starts at login, restarts on crash).
+   - **Signing:** skipped for now, but to be set up as soon as midimend is
+     distributed via homebrew — not strictly required for a from-source
+     formula (curl-downloaded files carry no quarantine attribute, so
+     Gatekeeper never evaluates them), but a matter of courtesy towards
+     users. Recipe: sign with a "Developer ID Application" certificate
+     (`codesign --options runtime --timestamp` + entitlements file), then
+     notarize (`xcrun notarytool submit --wait`). Hardened runtime blocks
+     JavaScriptCore's JIT; add the `com.apple.security.cs.allow-jit`
+     entitlement (without it JSC silently falls back to the interpreter —
+     harmless at MIDI rates, but the entitlement is the clean fix). A bare
+     executable/zip cannot be stapled; Gatekeeper fetches the notarization
+     ticket online, or ship a `.pkg`/`.dmg` if offline install matters.
+     Natural home: a GitHub Actions release workflow, signing between
+     build and upload.
 
 ## v1 — timing
 
