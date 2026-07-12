@@ -105,10 +105,7 @@ public final class ScriptEngine: @unchecked Sendable {
     // MARK: - Bootstrap
 
     private func evaluateBootstrap() throws {
-        guard let url = Bundle.module.url(forResource: "Bootstrap", withExtension: "js"),
-              let source = try? String(contentsOf: url, encoding: .utf8) else {
-            throw MidimendError.script("Bootstrap.js resource missing from bundle")
-        }
+        let source = String(decoding: PackageResources.Bootstrap_js, as: UTF8.self)
         exceptionBox.last = nil
         context.evaluateScript(source, withSourceURL: URL(fileURLWithPath: "Bootstrap.js"))
         if let error = exceptionBox.last {

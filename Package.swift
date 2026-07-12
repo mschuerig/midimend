@@ -14,7 +14,10 @@ let package = Package(
         .target(
             name: "Midimend",
             resources: [
-                .copy("Resources/Bootstrap.js")
+                // Compiled into the binary: keeps the executable
+                // single-file (nothing to find at runtime, one Mach-O to
+                // sign and notarize).
+                .embedInCode("Resources/Bootstrap.js")
             ],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
