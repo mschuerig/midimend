@@ -9,7 +9,7 @@ setlinebuf(stdout)
 let arguments = Array(CommandLine.arguments.dropFirst())
 
 /// Bumped per release; the release workflow refuses tags that don't match.
-let midimendVersion = "0.1.1"
+let midimendVersion = "0.2.0"
 
 func printUsage() {
     print("""
