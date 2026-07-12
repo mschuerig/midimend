@@ -1,4 +1,7 @@
-// swift-tools-version:6.2
+// swift-tools-version:6.0
+// Tools 6.0 is the floor that supports swiftLanguageMode(.v6); staying
+// there lets Xcode 16.x build the package (CI runners, brew users) —
+// nothing here needs a newer toolchain.
 import PackageDescription
 
 let package = Package(
