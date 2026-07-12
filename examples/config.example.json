@@ -1,0 +1,20 @@
+{
+  "script": "minilab-mainknob.js",
+  "midi": {
+    "inputs": [
+      { "hardware": "MiniLab37 MIDI" },
+      { "virtual": "Midimend In" }
+    ],
+    "outputs": [
+      { "virtual": "Midimend Out" }
+    ]
+  },
+  "parameters": {
+    "Source Patch CC": 16,
+    "CC Prev Patch": 110,
+    "CC Next Patch": 111,
+    "Source Set CC": 17,
+    "CC Prev Set": 112,
+    "CC Next Set": 113
+  }
+}
