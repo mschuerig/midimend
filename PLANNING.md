@@ -82,10 +82,16 @@ as few surprises as possible, and problems must be easy to diagnose.
      tag's sha256 and committed to the existing `mschuerig/homebrew-tap`
      (local clone); verified end to end: `brew install --build-from-source
      mschuerig/tap/midimend`, `brew test`, `brew audit --strict` all
-     clean, man page and completions installed. Remaining: push the tap
-     commit; then `brew install mschuerig/tap/midimend` works for
-     everyone. Consider `brew services start midimend` smoke test after
-     creating ~/Music/Midimend/config.json.
+     clean, man page and completions installed. Smoke-tested for real:
+     `~/Music/Midimend/` set up from the example, `brew services start
+     midimend` runs, virtual ports visible system-wide, MiniLab
+     connected. The smoke test caught a bug: under launchd stdout is
+     fully buffered, so the service log stayed empty and SIGTERM would
+     discard it — fixed with setlinebuf(stdout) in main.swift; ships
+     with the next release (installed v0.1.0 still has it; logs appear
+     only after ~4 KB of output). Remaining: push the tap commit, and
+     verify in MainStage that a saved connection to "Midimend Out"
+     re-binds across a midimend restart (port persistence).
    - **Signing:** implemented in `packaging/release.sh` (waiting on the
      certificate/API-key setup, see above) — not strictly required for a
      from-source formula (curl-downloaded files carry no quarantine

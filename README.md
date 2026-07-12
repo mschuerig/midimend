@@ -31,35 +31,41 @@ mends it: the one relative CC becomes two distinct CCs (value 127), which
 [examples/config.example.json](examples/config.example.json) feeds to
 MainStage, where they're mapped in Assignments & Mappings.
 
-## Build & run
+## Install & run
 
 ```sh
-swift build -c release
-.build/release/midimend examples/config.example.json
+brew install mschuerig/tap/midimend
+brew services start midimend    # runs now and at every login
 ```
 
-Requires macOS 13+. No entitlements or permissions needed.
-
-Without arguments, midimend runs `~/Music/Midimend/config.json` — a
-visible folder to keep your config and scripts in, next to where
-Logic/MainStage users already keep their content.
-
-To see what's connected — and, given a config, what it matches:
-
-```sh
-.build/release/midimend --list-devices
-.build/release/midimend --list-devices examples/config.example.json
-```
-
-If a configured device isn't present at startup, midimend warns and lists
-the devices that are, then connects the device automatically when it
-appears.
+The service runs `midimend` without arguments, which reads
+`~/Music/Midimend/config.json` — a visible folder to keep your config
+and scripts in, next to where Logic/MainStage users already keep their
+content. Requires macOS 13+. No entitlements or permissions needed.
 
 To start a config for a script, generate a skeleton with the script's
 parameter defaults filled in, then set the input device name:
 
 ```sh
-.build/release/midimend --init examples/minilab-mainknob.js > config.json
+midimend --init your-script.js > ~/Music/Midimend/config.json
+```
+
+To see what's connected — and, given a config, what it matches:
+
+```sh
+midimend --list-devices
+midimend --list-devices ~/Music/Midimend/config.json
+```
+
+If a configured device isn't present at startup, midimend warns and lists
+the devices that are, then connects the device automatically when it
+appears. The service's output lands in `/opt/homebrew/var/log/midimend.log`.
+
+To build from source instead:
+
+```sh
+swift build -c release
+.build/release/midimend examples/config.example.json
 ```
 
 ## Configuration

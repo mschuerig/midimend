@@ -1,6 +1,11 @@
 import Foundation
 import Midimend
 
+// Under launchd/brew services stdout is a file: without this, messages sit
+// in stdio's full buffer and are lost on SIGTERM — the service log must
+// show connects/reloads as they happen.
+setlinebuf(stdout)
+
 let arguments = Array(CommandLine.arguments.dropFirst())
 
 /// Bumped per release; the release workflow refuses tags that don't match.
