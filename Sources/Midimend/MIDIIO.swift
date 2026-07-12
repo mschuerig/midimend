@@ -27,6 +27,8 @@ public final class MIDIIO: @unchecked Sendable {
     private let stateLock = NSLock()
     private var hardwareDestinations: [MIDIEndpointRef] = []
     private var connectedSourceIDs: Set<MIDIUniqueID> = []
+    private var presentSourceNames: Set<String> = []
+    private var presentDestinationNames: Set<String> = []
     private let adminQueue = DispatchQueue(label: "midimend.midi-admin")
 
     public init(
@@ -71,6 +73,10 @@ public final class MIDIIO: @unchecked Sendable {
             log("Created virtual output: \(name)")
         }
 
+        // Seed the plug/unplug snapshot with what's already present so startup
+        // doesn't report every pre-existing device as freshly "appeared".
+        presentSourceNames = hardwareSourceNames()
+        presentDestinationNames = hardwareDestinationNames()
         refreshHardwareEndpoints()
         reportMissingHardware()
     }
@@ -130,29 +136,81 @@ public final class MIDIIO: @unchecked Sendable {
     // MARK: - Hardware endpoints
 
     private func refreshHardwareEndpoints() {
+        logEndpointChanges()
         connectMatchingSources()
         resolveHardwareDestinations()
     }
 
-    private func connectMatchingSources() {
+    /// Logs hardware endpoints that have appeared or disappeared since the last
+    /// setup-change, so the log shows plug/unplug events even for devices that
+    /// don't match the config — otherwise a keyboard that fails to connect is
+    /// indistinguishable from one that was never seen.
+    private func logEndpointChanges() {
+        let sources = hardwareSourceNames()
+        let destinations = hardwareDestinationNames()
+        stateLock.lock()
+        let messages = EndpointChanges.messages(
+            previousSources: presentSourceNames, currentSources: sources,
+            previousDestinations: presentDestinationNames, currentDestinations: destinations
+        )
+        presentSourceNames = sources
+        presentDestinationNames = destinations
+        stateLock.unlock()
+        messages.forEach(log)
+    }
+
+    private func hardwareSourceNames() -> Set<String> {
+        var names: Set<String> = []
         for index in 0..<MIDIGetNumberOfSources() {
             let source = MIDIGetSource(index)
             guard source != 0, !virtualSources.contains(source),
-                  let name = midiDisplayName(source),
-                  case .connected = selection.input(name) else { continue }
+                  let name = midiDisplayName(source) else { continue }
+            names.insert(name)
+        }
+        return names
+    }
+
+    private func hardwareDestinationNames() -> Set<String> {
+        var names: Set<String> = []
+        for index in 0..<MIDIGetNumberOfDestinations() {
+            let destination = MIDIGetDestination(index)
+            guard destination != 0, !virtualDestinations.contains(destination),
+                  let name = midiDisplayName(destination) else { continue }
+            names.insert(name)
+        }
+        return names
+    }
+
+    private func connectMatchingSources() {
+        var presentIDs: Set<MIDIUniqueID> = []
+        for index in 0..<MIDIGetNumberOfSources() {
+            let source = MIDIGetSource(index)
+            guard source != 0, !virtualSources.contains(source),
+                  let name = midiDisplayName(source) else { continue }
             var uniqueID: MIDIUniqueID = 0
             MIDIObjectGetIntegerProperty(source, kMIDIPropertyUniqueID, &uniqueID)
+            presentIDs.insert(uniqueID)
+            guard case .connected = selection.input(name) else { continue }
             stateLock.lock()
             let alreadyConnected = connectedSourceIDs.contains(uniqueID)
             stateLock.unlock()
             guard !alreadyConnected else { continue }
-            if MIDIPortConnectSource(inputPort, source, nil) == noErr {
+            let status = MIDIPortConnectSource(inputPort, source, nil)
+            if status == noErr {
                 stateLock.lock()
                 connectedSourceIDs.insert(uniqueID)
                 stateLock.unlock()
                 log("Connected input: \(name)")
+            } else {
+                log("warning: could not connect input \(name) (MIDIPortConnectSource: \(status))")
             }
         }
+        // Forget sources that have gone away so a replug (which CoreMIDI may
+        // give the same unique ID) reconnects instead of being skipped as
+        // already-connected against a severed connection.
+        stateLock.lock()
+        connectedSourceIDs.formIntersection(presentIDs)
+        stateLock.unlock()
     }
 
     private func resolveHardwareDestinations() {

@@ -187,6 +187,12 @@ sigint.setEventHandler {
 }
 sigint.resume()
 
+// Run the main run loop rather than dispatchMain(): CoreMIDI delivers the
+// client's setup-change notifications (hot-plug of devices) only while the run
+// loop of the thread that created the client — the main thread — is running.
+// dispatchMain() services the main dispatch queue but runs no CFRunLoop, so
+// hot-plugged devices would never connect. The SIGINT source above still fires
+// because the running run loop drains the main dispatch queue.
 withExtendedLifetime(engine) {
-    dispatchMain()
+    CFRunLoopRun()
 }
