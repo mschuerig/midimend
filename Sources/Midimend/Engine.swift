@@ -66,7 +66,8 @@ public final class Engine: @unchecked Sendable {
             send: { [weak self] bytes in self?.midi?.send(bytes) },
             trace: { message in print(message) },
             schedule: { [weak self] delayMs, action in
-                self?.jsQueue.asyncAfter(deadline: .now() + delayMs / 1000.0, execute: action)
+                guard let self else { return }
+                Self.scheduleStrict(afterMilliseconds: delayMs, on: self.jsQueue, action: action)
             }
         )
     }
@@ -131,6 +132,26 @@ public final class Engine: @unchecked Sendable {
         }
         // Re-arm: atomic saves replace the file, invalidating watched descriptors.
         installWatchers()
+    }
+
+    // MARK: - Strict scheduling (sendAfterMilliseconds)
+
+    /// One-shot timer that opts out of timer coalescing. asyncAfter offers no
+    /// such opt-out, and the system leeway it allows grows with the process's
+    /// priority tier; scheduled sends need to land on time.
+    static func scheduleStrict(
+        afterMilliseconds delayMs: Double,
+        on queue: DispatchQueue,
+        action: @escaping @Sendable () -> Void
+    ) {
+        let timer = DispatchSource.makeTimerSource(flags: .strict, queue: queue)
+        timer.schedule(deadline: .now() + delayMs / 1000.0, leeway: .nanoseconds(0))
+        timer.setEventHandler {
+            action()
+            // The handler↔source cycle keeps the timer alive until here.
+            timer.cancel()
+        }
+        timer.resume()
     }
 
     // MARK: - Host-time conversion (for --measure)
