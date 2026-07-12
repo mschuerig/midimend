@@ -14,10 +14,15 @@ as few surprises as possible, and problems must be easy to diagnose.
    and flags entries that match nothing; at startup, a configured device
    that isn't found produces a warning listing the devices that *are*
    present (it still connects automatically when it appears).
-2. **Config template generation.** `midimend --init script.js` evaluates the
+2. **Testing.** Test-first from here on: new behavior gets a failing test
+   before the implementation. Backfill coverage for existing code — config
+   loading and script-path resolution, CLI argument handling, and MIDIIO's
+   pattern-matching/missing-device logic (needs a seam so it can run
+   without CoreMIDI devices; the script engine is already covered).
+3. **Config template generation.** `midimend --init script.js` evaluates the
    script's `PluginParameters` and prints a config skeleton with defaults
    filled in.
-3. **Device robustness.** Default to all inputs when `inputs` is omitted
+4. **Device robustness.** Default to all inputs when `inputs` is omitted
    (excluding our own virtual ports — feedback-loop guard); connect
    hot-plugged devices via the existing setup-change notification.
    (Matching already uses the user-visible display name — the name shown
@@ -33,7 +38,7 @@ as few surprises as possible, and problems must be easy to diagnose.
      pre-defined ignore list — exclusion is fully explicit in the config,
      supported by a `--list-devices` that shows what is connected, matched,
      and ignored.
-4. **Publish.** GitHub repo `midimend` (done); license: No-Rights-Reserved
+5. **Publish.** GitHub repo `midimend` (done); license: No-Rights-Reserved
    (done); homebrew formula in `mschuerig/homebrew-tap` building from
    source, with a `service` block so `brew services start midimend`
    answers "how does the app run" (starts at login, restarts on crash).
@@ -110,8 +115,10 @@ Ableton Link.
   synchronously on allocation thresholds (sub-ms at our heap sizes,
   harmless today) — and only add a lock-free receive ring if measurement
   says the dispatch hop matters.
-- **Port persistence:** set `kMIDIPropertyUniqueID` on virtual ports so other
-  apps' saved connections re-bind across restarts.
+- **Port persistence (implemented):** virtual ports get a stable
+  `kMIDIPropertyUniqueID` (name hash) so other apps' saved connections
+  re-bind across restarts; on collision CoreMIDI keeps its random ID.
+  Not yet verified end-to-end against a DAW's saved connections.
 - **Receiver-side suppression:** CoreMIDI has no exclusive capture; DAWs must
   ignore raw hardware via input-port selection (documented in the README).
 - **iOS (distant):** keep the core platform-neutral (engine + scheduler +
