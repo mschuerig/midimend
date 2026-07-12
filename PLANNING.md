@@ -80,7 +80,11 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
-   - **Status:** v0.1.1 (2026-07-12) is the released state — signed
+   - **Status:** v0.2.0 (2026-07-12) is the released state — adds the
+     v0.x latency work (`--measure`, strict `sendAfterMilliseconds`
+     timers, idle-time GC, interactive-tier service); upgraded, service
+     restarted with the ProcessType Interactive plist, and log verified
+     on Michael's machine. Previous: v0.1.1 (2026-07-12) — signed
      (Developer ID G2 cert, valid to 2031), notarized, brew-installed
      and running as a service on Michael's machine with the MiniLab
      connected and the service log confirmed working (v0.1.0's stdout
