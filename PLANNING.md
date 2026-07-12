@@ -19,9 +19,11 @@ as few surprises as possible, and problems must be easy to diagnose.
    loading and script-path resolution, CLI argument handling, and MIDIIO's
    pattern-matching/missing-device logic (needs a seam so it can run
    without CoreMIDI devices; the script engine is already covered).
-3. **Config template generation.** `midimend --init script.js` evaluates the
-   script's `PluginParameters` and prints a config skeleton with defaults
-   filled in.
+3. **Config template generation.** (done) `midimend --init script.js`
+   evaluates the script's `PluginParameters` and prints a config skeleton
+   to stdout with defaults filled in (menu defaults as their valueStrings
+   entry, checkboxes as booleans; labels and momentary buttons omitted);
+   script warnings go to stderr so the JSON can be redirected.
 4. **Device robustness.** Default to all inputs when `inputs` is omitted
    (excluding our own virtual ports — feedback-loop guard); connect
    hot-plugged devices via the existing setup-change notification.

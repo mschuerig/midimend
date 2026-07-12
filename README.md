@@ -51,6 +51,13 @@ If a configured device isn't present at startup, midimend warns and lists
 the devices that are, then connects the device automatically when it
 appears.
 
+To start a config for a script, generate a skeleton with the script's
+parameter defaults filled in, then set the input device name:
+
+```sh
+.build/release/midimend --init examples/minilab-mainknob.js > config.json
+```
+
 ## Configuration
 
 ```jsonc
