@@ -17,9 +17,12 @@ as few surprises as possible, and problems must be easy to diagnose.
 2. **Testing.** Test-first from here on: new behavior gets a failing test
    before the implementation. Backfill status: script engine, config
    decoding, script-path resolution, name matching, and the device-selection
-   rules (`EndpointSelection` — the seam extracted from MIDIIO) are covered.
-   Still untested: CLI argument handling, and MIDIIO's remaining CoreMIDI
-   plumbing (would need device fakes; low value while it stays thin).
+   rules (`EndpointSelection`) and the UMP word codec (`MIDI1UMP`) — both
+   seams extracted from MIDIIO — are covered. Still untested: CLI argument
+   handling (extract a Command parser from main.swift, or subprocess
+   tests), Engine's hot-reload path (needs temp files and touches system
+   MIDI), and MIDIIO's remaining CoreMIDI plumbing (would need device
+   fakes; low value while it stays thin).
 3. **Config template generation.** (done) `midimend --init script.js`
    evaluates the script's `PluginParameters` and prints a config skeleton
    to stdout with defaults filled in (menu defaults as their valueStrings

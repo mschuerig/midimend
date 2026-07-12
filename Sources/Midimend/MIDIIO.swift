@@ -79,11 +79,7 @@ public final class MIDIIO: @unchecked Sendable {
     // MARK: - Sending
 
     public func send(_ event: MIDIEventBytes) {
-        let word: UInt32 = (0x2 << 28)
-            | (UInt32(event.status) << 16)
-            | (UInt32(event.data1) << 8)
-            | UInt32(event.data2)
-        sendWords([word])
+        sendWords([MIDI1UMP.word(for: event)])
     }
 
     private func sendWords(_ words: [UInt32]) {
@@ -110,31 +106,15 @@ public final class MIDIIO: @unchecked Sendable {
     private func handle(_ eventList: UnsafePointer<MIDIEventList>) {
         for packetPointer in eventList.unsafeSequence() {
             let wordCount = Int(packetPointer.pointee.wordCount)
-            withUnsafeBytes(of: packetPointer.pointee.words) { raw in
-                let words = raw.bindMemory(to: UInt32.self)
-                var index = 0
-                while index < min(wordCount, words.count) {
-                    let word = words[index]
-                    let messageType = UInt8(word >> 28)
-                    switch messageType {
-                    case 0x2: // MIDI 1.0 channel voice
-                        let status = UInt8((word >> 16) & 0xFF)
-                        let data1 = UInt8((word >> 8) & 0x7F)
-                        let data2 = UInt8(word & 0x7F)
-                        receive(MIDIEventBytes(status: status, data1: data1, data2: data2), 1)
-                        index += 1
-                    case 0x1: // system real-time / common: pass through untouched
-                        sendWords([word])
-                        index += 1
-                    case 0x0: // utility (NOOP, jitter reduction)
-                        index += 1
-                    case 0x3, 0x4: // sysex7 / MIDI 2.0 channel voice
-                        index += 2
-                    case 0x5: // data 128
-                        index += 4
-                    default:
-                        index += 1
-                    }
+            let words = withUnsafeBytes(of: packetPointer.pointee.words) { raw in
+                Array(raw.bindMemory(to: UInt32.self).prefix(wordCount))
+            }
+            for action in MIDI1UMP.parse(words) {
+                switch action {
+                case .channelVoice(let bytes):
+                    receive(bytes, 1)
+                case .passThrough(let word):
+                    sendWords([word])
                 }
             }
         }
