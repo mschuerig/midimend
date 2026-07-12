@@ -59,12 +59,18 @@ public struct EndpointSpec: Codable, Equatable, Sendable {
 }
 
 public struct MIDISetup: Codable, Equatable, Sendable {
-    public var inputs: [EndpointSpec]
+    /// nil (key omitted) means: connect all hardware inputs except ignored
+    /// ones and our own virtual ports.
+    public var inputs: [EndpointSpec]?
     public var outputs: [EndpointSpec]
+    /// Devices to leave alone entirely (same substring matching as
+    /// `hardware`) — e.g. a controller's DAW-control port.
+    public var ignore: [String]?
 
-    public init(inputs: [EndpointSpec], outputs: [EndpointSpec]) {
+    public init(inputs: [EndpointSpec]? = nil, outputs: [EndpointSpec], ignore: [String]? = nil) {
         self.inputs = inputs
         self.outputs = outputs
+        self.ignore = ignore
     }
 }
 

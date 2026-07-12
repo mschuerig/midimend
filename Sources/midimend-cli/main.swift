@@ -26,31 +26,44 @@ func fail(_ error: Error) -> Never {
 }
 
 func listDevices(configPath: String?) throws {
-    var setup: MIDISetup?
+    var selection: EndpointSelection?
     if let configPath {
-        setup = try Config.load(from: URL(fileURLWithPath: configPath).standardizedFileURL).midi
+        let setup = try Config.load(from: URL(fileURLWithPath: configPath).standardizedFileURL).midi
+        selection = EndpointSelection(setup: setup)
     }
     let devices = DeviceList.current()
     printDevices("MIDI inputs (sources)", names: devices.sources,
-                 patterns: setup?.inputs.compactMap(\.hardware))
+                 verdict: selection.map { s in { s.input($0) } },
+                 missing: selection?.unmatchedInputPatterns(among: devices.sources) ?? [])
     print("")
     printDevices("MIDI outputs (destinations)", names: devices.destinations,
-                 patterns: setup?.outputs.compactMap(\.hardware))
+                 verdict: selection.map { s in { s.output($0) } },
+                 missing: selection?.unmatchedOutputPatterns(among: devices.destinations) ?? [])
 }
 
-func printDevices(_ title: String, names: [String], patterns: [String]?) {
+func printDevices(
+    _ title: String,
+    names: [String],
+    verdict: ((String) -> EndpointSelection.Verdict)?,
+    missing: [String]
+) {
     print("\(title):")
     if names.isEmpty {
         print("  (none)")
     }
     for name in names {
-        if let pattern = patterns?.first(where: { midiNameMatches(name, pattern: $0) }) {
+        switch verdict?(name) {
+        case .connected(let pattern?):
             print("  \(name)  — matched by \"\(pattern)\"")
-        } else {
+        case .connected(nil):
+            print("  \(name)  — connected (no \"inputs\" in config: all devices)")
+        case .ignored(let pattern):
+            print("  \(name)  — ignored by \"\(pattern)\"")
+        case .notMatched, nil:
             print("  \(name)")
         }
     }
-    for pattern in patterns ?? [] where !names.contains(where: { midiNameMatches($0, pattern: pattern) }) {
+    for pattern in missing {
         print("  (nothing matches \"\(pattern)\")")
     }
 }

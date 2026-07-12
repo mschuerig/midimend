@@ -24,22 +24,23 @@ as few surprises as possible, and problems must be easy to diagnose.
    to stdout with defaults filled in (menu defaults as their valueStrings
    entry, checkboxes as booleans; labels and momentary buttons omitted);
    script warnings go to stderr so the JSON can be redirected.
-4. **Device robustness.** Default to all inputs when `inputs` is omitted
-   (excluding our own virtual ports — feedback-loop guard); connect
-   hot-plugged devices via the existing setup-change notification.
+4. **Device robustness.** (done) `inputs` omitted defaults to all hardware
+   inputs (excluding our own virtual ports — feedback-loop guard);
+   hot-plugged devices connect via the existing setup-change notification.
    (Matching already uses the user-visible display name — the name shown
    in Audio MIDI Setup, including user renames.)
-   - **Port exclusion:** controllers often expose a second endpoint for DAW
-     control (MCU/HUI + integration scripts), e.g. the MiniLab's
-     "MiniLab37 DAW" next to "MiniLab37 MIDI". These must be ignorable —
-     they talk to the DAW directly and Midimend should neither consume nor
-     forward them. Design: a top-level `"ignore": ["DAW", …]` list (same
-     substring matching as inputs), applied both to explicit input matches
-     (a broad substring like "MiniLab" would otherwise catch both ports)
-     and to the default-all-inputs mode. Decided: no built-in or
-     pre-defined ignore list — exclusion is fully explicit in the config,
-     supported by a `--list-devices` that shows what is connected, matched,
-     and ignored.
+   - **Port exclusion:** (done) controllers often expose a second endpoint
+     for DAW control (MCU/HUI + integration scripts), e.g. the MiniLab's
+     "Minilab37 DAW" next to "Minilab37 MIDI" — they talk to the DAW
+     directly and Midimend neither consumes nor forwards them. An
+     `"ignore": ["DAW", …]` list in the `midi` section (same substring
+     matching as `hardware`) wins over explicit input/output matches (a
+     broad substring like "Minilab" would otherwise catch both ports) and
+     over the default-all-inputs mode. Decided: no built-in or pre-defined
+     ignore list — exclusion is fully explicit in the config, supported by
+     `--list-devices`, which shows what is matched and ignored. The rules
+     live in `EndpointSelection` (pure, unit-tested; shared by MIDIIO and
+     `--list-devices`).
 5. **Publish.** GitHub repo `midimend` (done); license: No-Rights-Reserved
    (done); homebrew formula in `mschuerig/homebrew-tap` building from
    source, with a `service` block so `brew services start midimend`

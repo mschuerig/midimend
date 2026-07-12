@@ -71,7 +71,8 @@ parameter defaults filled in, then set the input device name:
     "outputs": [
       { "virtual": "Midimend Out" }       // virtual port; select as input in your DAW
       // { "hardware": "some device" }    // ...or send to a hardware destination
-    ]
+    ],
+    "ignore": ["DAW"]                     // devices to leave alone entirely (substring match)
   },
   "parameters": {                          // values for the script's PluginParameters, by name
     "Source CC": 28,                       // numbers for sliders
@@ -80,6 +81,13 @@ parameter defaults filled in, then set the input device name:
   }
 }
 ```
+
+Omit `"inputs"` entirely to connect *all* MIDI devices (except ignored ones
+and Midimend's own virtual ports). Devices are connected when they appear,
+so plugging in a controller after startup just works. Use `"ignore"` for
+endpoints Midimend should neither read nor send to — typically a
+controller's DAW-control port (e.g. "Minilab37 DAW" next to
+"Minilab37 MIDI"), which talks to the DAW directly.
 
 Parameter *definitions* live in the script's `PluginParameters` array (the
 usual convention); the config supplies *values*. Config and script files are

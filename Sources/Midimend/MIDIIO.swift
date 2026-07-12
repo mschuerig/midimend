@@ -17,8 +17,7 @@ public final class MIDIIO: @unchecked Sendable {
     private var virtualDestinations: [MIDIEndpointRef] = []
     private var virtualSources: [MIDIEndpointRef] = []
 
-    private let hardwareInputPatterns: [String]
-    private let hardwareOutputPatterns: [String]
+    private let selection: EndpointSelection
     private let receive: ReceiveHandler
     private let log: @Sendable (String) -> Void
 
@@ -34,8 +33,7 @@ public final class MIDIIO: @unchecked Sendable {
     ) throws {
         self.receive = receive
         self.log = log
-        self.hardwareInputPatterns = setup.inputs.compactMap(\.hardware)
-        self.hardwareOutputPatterns = setup.outputs.compactMap(\.hardware)
+        self.selection = EndpointSelection(setup: setup)
 
         try check(MIDIClientCreateWithBlock("Midimend" as CFString, &client) { [weak self] notification in
             if notification.pointee.messageID == .msgSetupChanged, let self {
@@ -49,7 +47,7 @@ public final class MIDIIO: @unchecked Sendable {
 
         try check(MIDIOutputPortCreate(client, "output" as CFString, &outputPort), "MIDIOutputPortCreate")
 
-        for spec in setup.inputs {
+        for spec in setup.inputs ?? [] {
             guard let name = spec.virtualName else { continue }
             var endpoint = MIDIEndpointRef()
             try check(MIDIDestinationCreateWithProtocol(client, name as CFString, ._1_0, &endpoint) { [weak self] eventList, _ in
@@ -150,12 +148,11 @@ public final class MIDIIO: @unchecked Sendable {
     }
 
     private func connectMatchingSources() {
-        guard !hardwareInputPatterns.isEmpty else { return }
         for index in 0..<MIDIGetNumberOfSources() {
             let source = MIDIGetSource(index)
             guard source != 0, !virtualSources.contains(source),
                   let name = midiDisplayName(source),
-                  matches(name, patterns: hardwareInputPatterns) else { continue }
+                  case .connected = selection.input(name) else { continue }
             var uniqueID: MIDIUniqueID = 0
             MIDIObjectGetIntegerProperty(source, kMIDIPropertyUniqueID, &uniqueID)
             stateLock.lock()
@@ -172,14 +169,13 @@ public final class MIDIIO: @unchecked Sendable {
     }
 
     private func resolveHardwareDestinations() {
-        guard !hardwareOutputPatterns.isEmpty else { return }
         var found: [MIDIEndpointRef] = []
         var names: [String] = []
         for index in 0..<MIDIGetNumberOfDestinations() {
             let destination = MIDIGetDestination(index)
             guard destination != 0, !virtualDestinations.contains(destination),
                   let name = midiDisplayName(destination),
-                  matches(name, patterns: hardwareOutputPatterns) else { continue }
+                  case .connected = selection.output(name) else { continue }
             found.append(destination)
             names.append(name)
         }
@@ -206,22 +202,17 @@ public final class MIDIIO: @unchecked Sendable {
             guard destination != 0, !virtualDestinations.contains(destination) else { return nil }
             return midiDisplayName(destination)
         }
-        warnUnmatched(patterns: hardwareInputPatterns, present: sourceNames, kind: "input")
-        warnUnmatched(patterns: hardwareOutputPatterns, present: destinationNames, kind: "output")
+        warnUnmatched(selection.unmatchedInputPatterns(among: sourceNames),
+                      present: sourceNames, kind: "input")
+        warnUnmatched(selection.unmatchedOutputPatterns(among: destinationNames),
+                      present: destinationNames, kind: "output")
     }
 
-    private func warnUnmatched(patterns: [String], present: [String], kind: String) {
-        let missing = patterns.filter { pattern in
-            !present.contains { midiNameMatches($0, pattern: pattern) }
-        }
+    private func warnUnmatched(_ missing: [String], present: [String], kind: String) {
         guard !missing.isEmpty else { return }
         let quoted = missing.map { "\"\($0)\"" }.joined(separator: ", ")
         let available = present.isEmpty ? "none" : present.joined(separator: ", ")
         log("warning: no MIDI \(kind) matching \(quoted) — connecting automatically if it appears; present \(kind)s: \(available)")
-    }
-
-    private func matches(_ name: String, patterns: [String]) -> Bool {
-        patterns.contains { midiNameMatches(name, pattern: $0) }
     }
 
     /// A stable unique ID lets other apps' saved connections re-bind to our
