@@ -9,6 +9,7 @@ import Foundation
 public final class Engine: @unchecked Sendable {
     private let configURL: URL
     private var config: Config
+    private let log: @Sendable (String) -> Void
     private let jsQueue = DispatchQueue(label: "midimend.js", qos: .userInteractive)
     private var midi: MIDIIO?
     private var scriptEngine: ScriptEngine?
@@ -18,9 +19,14 @@ public final class Engine: @unchecked Sendable {
     private var latencyStats: LatencyStats?  // touched on jsQueue only
     private var idleTicks = 0
 
-    public init(configPath: String, measure: Bool = false) throws {
+    public init(
+        configPath: String,
+        measure: Bool = false,
+        log: @escaping @Sendable (String) -> Void = { print($0) }
+    ) throws {
         self.configURL = URL(fileURLWithPath: configPath).standardizedFileURL
         self.config = try Config.load(from: configURL)
+        self.log = log
         if measure { self.latencyStats = LatencyStats() }
     }
 
@@ -42,7 +48,7 @@ public final class Engine: @unchecked Sendable {
                     )
                 }
             }
-        })
+        }, log: log)
         self.midi = midi
         try jsQueue.sync {
             self.scriptEngine = try self.makeScriptEngine()
@@ -64,7 +70,7 @@ public final class Engine: @unchecked Sendable {
             scriptName: scriptURL.lastPathComponent,
             configParameters: config.parameters ?? [:],
             send: { [weak self] bytes in self?.midi?.send(bytes) },
-            trace: { message in print(message) },
+            trace: log,
             schedule: { [weak self] delayMs, action in
                 guard let self else { return }
                 Self.scheduleStrict(afterMilliseconds: delayMs, on: self.jsQueue, action: action)
@@ -82,7 +88,7 @@ public final class Engine: @unchecked Sendable {
             self.scriptEngine?.idleTick()
             self.idleTicks += 1
             if self.idleTicks % 40 == 0, let line = self.latencyStats?.summarizeAndReset() {
-                print(line)
+                self.log(line)
             }
         }
         timer.resume()
@@ -122,13 +128,13 @@ public final class Engine: @unchecked Sendable {
         do {
             let newConfig = try Config.load(from: configURL)
             if newConfig.midi != config.midi {
-                print("note: MIDI port configuration changed — restart to apply")
+                log("note: MIDI port configuration changed — restart to apply")
             }
             config = newConfig
             scriptEngine = try makeScriptEngine()
-            print("Reloaded \(config.script)")
+            log("Reloaded \(config.script)")
         } catch {
-            print("Reload failed: \(error) — keeping previous script")
+            log("Reload failed: \(error) — keeping previous script")
         }
         // Re-arm: atomic saves replace the file, invalidating watched descriptors.
         installWatchers()

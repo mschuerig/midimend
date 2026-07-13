@@ -16,13 +16,23 @@ as few surprises as possible, and problems must be easy to diagnose.
    present (it still connects automatically when it appears).
 2. **Testing.** Test-first from here on: new behavior gets a failing test
    before the implementation. Backfill status: script engine, config
-   decoding, script-path resolution, name matching, and the device-selection
-   rules (`EndpointSelection`) and the UMP word codec (`MIDI1UMP`) — both
-   seams extracted from MIDIIO — are covered. Still untested: CLI argument
-   handling (extract a Command parser from main.swift, or subprocess
-   tests), Engine's hot-reload path (needs temp files and touches system
-   MIDI), and MIDIIO's remaining CoreMIDI plumbing (would need device
-   fakes; low value while it stays thin).
+   decoding, script-path resolution, name matching, the device-selection
+   rules (`EndpointSelection`), the UMP word codec (`MIDI1UMP`), CLI
+   argument handling (`CLICommand`, extracted from main.swift), the
+   plug/unplug log lines (`EndpointChanges`) and connect/prune decisions
+   (`SourceSync`) — all pure seams — plus Engine's hot-reload path
+   (temp files, real but uniquely-named virtual ports) are covered.
+   - **End-to-end layer (the lesson of the hot-plug bug, 2026-07-13):**
+     `EndToEndTests` spawns the real binary and simulates hot-plug by
+     creating a virtual source (which fires `.msgSetupChanged`
+     system-wide), asserting the appear/connect/process/disappear chain.
+     This layer exists because main.swift's `dispatchMain()` ran no
+     CFRunLoop, so setup-change notifications never fired — a bug that
+     shipped despite a green unit suite, since no library-level test can
+     reach the process entry point. The earlier judgment that MIDIIO
+     plumbing tests were "low value while it stays thin" is retracted.
+     Both e2e and Engine tests `XCTSkip` when no MIDI server is
+     available (headless CI guard).
 3. **Config template generation.** (done) `midimend --init script.js`
    evaluates the script's `PluginParameters` and prints a config skeleton
    to stdout with defaults filled in (menu defaults as their valueStrings

@@ -9,7 +9,11 @@ Run the full check battery and report a pass/fail summary. Continue
 through failures so the report is complete; lead with any failure.
 
 1. **Unit tests:** `swift test` — expect all green (count is in the
-   output; it should not shrink).
+   output; it should not shrink). This includes the end-to-end battery
+   (`EndToEndTests`: spawns the built binary, simulates hot-plug with a
+   virtual source) and `EngineReloadTests` — if any of these were
+   *skipped* rather than run, that's a failure of this check: skips are
+   only for MIDI-less CI, never for this machine.
 2. **Build current:** `swift build` (debug is fine for the checks
    below).
 3. **Service coexistence:** if `brew services info midimend` says
@@ -24,6 +28,10 @@ through failures so the report is complete; lead with any failure.
    - `Connected input: Minilab37 MIDI` when the MiniLab is attached —
      if it isn't, expect instead the warning that lists present inputs
      (that's a pass for the warning path, note it as such)
+   - live hot-plug (only when Michael offers to replug the MiniLab;
+     the automated `EndToEndTests` already cover the mechanism):
+     `MIDI input appeared: …` followed by `Connected input: …`, and
+     `MIDI input disappeared: …` on unplug
    - `Script evaluated successfully!`
    - no `[JS Exception]`, no `error:`
 5. **Device listing:** `.build/debug/midimend --list-devices

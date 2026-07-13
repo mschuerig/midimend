@@ -182,35 +182,37 @@ public final class MIDIIO: @unchecked Sendable {
     }
 
     private func connectMatchingSources() {
-        var presentIDs: Set<MIDIUniqueID> = []
+        var present: [SourceSync.Present] = []
+        var endpoints: [MIDIUniqueID: MIDIEndpointRef] = [:]
         for index in 0..<MIDIGetNumberOfSources() {
             let source = MIDIGetSource(index)
             guard source != 0, !virtualSources.contains(source),
                   let name = midiDisplayName(source) else { continue }
             var uniqueID: MIDIUniqueID = 0
             MIDIObjectGetIntegerProperty(source, kMIDIPropertyUniqueID, &uniqueID)
-            presentIDs.insert(uniqueID)
-            guard case .connected = selection.input(name) else { continue }
-            stateLock.lock()
-            let alreadyConnected = connectedSourceIDs.contains(uniqueID)
-            stateLock.unlock()
-            guard !alreadyConnected else { continue }
-            let status = MIDIPortConnectSource(inputPort, source, nil)
+            var matched = false
+            if case .connected = selection.input(name) { matched = true }
+            present.append(SourceSync.Present(id: uniqueID, name: name, matched: matched))
+            endpoints[uniqueID] = source
+        }
+
+        stateLock.lock()
+        let plan = SourceSync.plan(present: present, connected: connectedSourceIDs)
+        connectedSourceIDs = plan.retainedIDs
+        stateLock.unlock()
+
+        for source in plan.connect {
+            guard let endpoint = endpoints[source.id] else { continue }
+            let status = MIDIPortConnectSource(inputPort, endpoint, nil)
             if status == noErr {
                 stateLock.lock()
-                connectedSourceIDs.insert(uniqueID)
+                connectedSourceIDs.insert(source.id)
                 stateLock.unlock()
-                log("Connected input: \(name)")
+                log("Connected input: \(source.name)")
             } else {
-                log("warning: could not connect input \(name) (MIDIPortConnectSource: \(status))")
+                log("warning: could not connect input \(source.name) (MIDIPortConnectSource: \(status))")
             }
         }
-        // Forget sources that have gone away so a replug (which CoreMIDI may
-        // give the same unique ID) reconnects instead of being skipped as
-        // already-connected against a severed connection.
-        stateLock.lock()
-        connectedSourceIDs.formIntersection(presentIDs)
-        stateLock.unlock()
     }
 
     private func resolveHardwareDestinations() {

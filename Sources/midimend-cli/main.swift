@@ -47,40 +47,15 @@ func listDevices(configPath: String?) throws {
         selection = EndpointSelection(setup: setup)
     }
     let devices = DeviceList.current()
-    printDevices("MIDI inputs (sources)", names: devices.sources,
-                 verdict: selection.map { s in { s.input($0) } },
-                 missing: selection?.unmatchedInputPatterns(among: devices.sources) ?? [])
+    deviceLines(title: "MIDI inputs (sources)", names: devices.sources,
+                verdict: selection.map { s in { s.input($0) } },
+                missing: selection?.unmatchedInputPatterns(among: devices.sources) ?? [])
+        .forEach { print($0) }
     print("")
-    printDevices("MIDI outputs (destinations)", names: devices.destinations,
-                 verdict: selection.map { s in { s.output($0) } },
-                 missing: selection?.unmatchedOutputPatterns(among: devices.destinations) ?? [])
-}
-
-func printDevices(
-    _ title: String,
-    names: [String],
-    verdict: ((String) -> EndpointSelection.Verdict)?,
-    missing: [String]
-) {
-    print("\(title):")
-    if names.isEmpty {
-        print("  (none)")
-    }
-    for name in names {
-        switch verdict?(name) {
-        case .connected(let pattern?):
-            print("  \(name)  — matched by \"\(pattern)\"")
-        case .connected(nil):
-            print("  \(name)  — connected (no \"inputs\" in config: all devices)")
-        case .ignored(let pattern):
-            print("  \(name)  — ignored by \"\(pattern)\"")
-        case .notMatched, nil:
-            print("  \(name)")
-        }
-    }
-    for pattern in missing {
-        print("  (nothing matches \"\(pattern)\")")
-    }
+    deviceLines(title: "MIDI outputs (destinations)", names: devices.destinations,
+                verdict: selection.map { s in { s.output($0) } },
+                missing: selection?.unmatchedOutputPatterns(among: devices.destinations) ?? [])
+        .forEach { print($0) }
 }
 
 func initTemplate(scriptPath: String) throws {
@@ -119,55 +94,35 @@ func defaultConfigPath() -> String {
 }
 
 let configPath: String
-var measure = false
+let measure: Bool
 
-switch arguments.first {
-case nil:
-    configPath = defaultConfigPath()
-case "--measure":
-    guard arguments.count <= 2 else {
-        printUsage()
-        exit(1)
+switch CLICommand.parse(arguments) {
+case .run(let path, let measureFlag):
+    configPath = path ?? defaultConfigPath()
+    measure = measureFlag
+case .listDevices(let path):
+    do {
+        try listDevices(configPath: path)
+    } catch {
+        fail(error)
     }
-    measure = true
-    configPath = arguments.count == 2 ? arguments[1] : defaultConfigPath()
-case "-h", "--help":
-    printUsage()
     exit(0)
-case "--version":
+case .initTemplate(let scriptPath):
+    do {
+        try initTemplate(scriptPath: scriptPath)
+    } catch {
+        fail(error)
+    }
+    exit(0)
+case .version:
     print("midimend \(midimendVersion)")
     exit(0)
-case "--list-devices":
-    guard arguments.count <= 2 else {
-        printUsage()
-        exit(1)
-    }
-    do {
-        try listDevices(configPath: arguments.count == 2 ? arguments[1] : nil)
-    } catch {
-        fail(error)
-    }
+case .help:
+    printUsage()
     exit(0)
-case "--init":
-    guard arguments.count == 2 else {
-        printUsage()
-        exit(1)
-    }
-    do {
-        try initTemplate(scriptPath: arguments[1])
-    } catch {
-        fail(error)
-    }
-    exit(0)
-case let option? where option.hasPrefix("-"):
+case .usageError:
     printUsage()
     exit(1)
-default:
-    guard arguments.count == 1 else {
-        printUsage()
-        exit(1)
-    }
-    configPath = arguments[0]
 }
 
 let engine: Engine
