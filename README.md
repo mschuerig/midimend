@@ -29,7 +29,9 @@ relative CC — direction is encoded in the value — but MainStage's
 of mapping fixes that. [examples/minilab-mainknob.js](examples/minilab-mainknob.js)
 mends it: the one relative CC becomes two distinct CCs (value 127), which
 [examples/config.example.json](examples/config.example.json) feeds to
-MainStage, where they're mapped in Assignments & Mappings.
+MainStage. The prev/next patch and set buttons in MainStage's stock
+layouts aren't mapped to any CC out of the box — map them to these CCs
+in Assignments & Mappings.
 
 ## Install & run
 
