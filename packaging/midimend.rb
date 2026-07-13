@@ -7,8 +7,8 @@
 class Midimend < Formula
   desc "Mend your MIDI before the DAW sees it"
   homepage "https://github.com/mschuerig/midimend"
-  url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.2.0.tar.gz"
-  sha256 "7bf04e4a7bb2d3827988048b06b999ff8c7e579f41d54de28bca584e61cfc3c9"
+  url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.2.1.tar.gz"
+  sha256 "1c93ac6a604275de018e6744bd7dceacff36b91740f8dfa26fee5645d51757dc"
   license :public_domain
   head "https://github.com/mschuerig/midimend.git", branch: "main"
 
