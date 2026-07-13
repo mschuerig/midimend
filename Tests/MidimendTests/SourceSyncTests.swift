@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The connect/prune decisions MIDIIO executes on every setup-change: which
 /// present sources to connect, and which remembered connections to forget.

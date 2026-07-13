@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The one-shot timer behind sendAfterMilliseconds: strict (no coalescing
 /// leeway), fires on the target queue, not before the deadline.

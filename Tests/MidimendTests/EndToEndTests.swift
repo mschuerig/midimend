@@ -1,6 +1,6 @@
 import XCTest
 import CoreMIDI
-@testable import Midimend
+@testable import MidimendCore
 
 /// End-to-end tests against the real midimend binary. This is the only layer
 /// that exercises main.swift — the run-loop choice there once silently killed

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The MIDI 1.0 UMP word codec: what MIDIIO receives from and hands to
 /// CoreMIDI's MIDIEventList API. Word layout (one word per channel-voice

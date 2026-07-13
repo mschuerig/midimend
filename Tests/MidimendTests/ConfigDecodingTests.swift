@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 final class ConfigDecodingTests: XCTestCase {
 

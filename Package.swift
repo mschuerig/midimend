@@ -11,11 +11,16 @@ let package = Package(
     ],
     products: [
         .executable(name: "midimend", targets: ["midimend-cli"]),
-        .library(name: "Midimend", targets: ["Midimend"]),
+        // Named MidimendCore, not Midimend: on a case-insensitive filesystem
+        // a library target "Midimend" collides with the executable product
+        // "midimend" in Xcode's build intermediates (midimend.build vs
+        // Midimend.build are the same dir), scrambling the module's source
+        // list. swift build is unaffected; Xcode is not.
+        .library(name: "MidimendCore", targets: ["MidimendCore"]),
     ],
     targets: [
         .target(
-            name: "Midimend",
+            name: "MidimendCore",
             resources: [
                 // Compiled into the binary: keeps the executable
                 // single-file (nothing to find at runtime, one Mach-O to
@@ -26,12 +31,12 @@ let package = Package(
         ),
         .executableTarget(
             name: "midimend-cli",
-            dependencies: ["Midimend"],
+            dependencies: ["MidimendCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
         .testTarget(
             name: "MidimendTests",
-            dependencies: ["Midimend"],
+            dependencies: ["MidimendCore"],
             swiftSettings: [.swiftLanguageMode(.v6)]
         ),
     ]

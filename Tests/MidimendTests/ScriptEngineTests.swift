@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// Thread-safe recorder for everything a script emits.
 private final class Recorder: @unchecked Sendable {

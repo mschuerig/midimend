@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The CLI's argument grammar, extracted from main.swift so it can be
 /// tested without spawning the binary. Side effects (default-config

@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The `hardware` spec matching rule: case-insensitive substring. This is
 /// the contract users rely on when writing configs, so pin it down.

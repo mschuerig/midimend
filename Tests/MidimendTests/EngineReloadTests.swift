@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The Engine's hot-reload path: script/config rewrites trigger a reload
 /// (including across atomic saves, which replace the watched file), a broken

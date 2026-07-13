@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The config's device-selection rules: explicit `hardware` patterns,
 /// default-all-inputs when `inputs` is omitted, and the `ignore` list

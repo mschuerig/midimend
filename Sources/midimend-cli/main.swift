@@ -1,5 +1,5 @@
 import Foundation
-import Midimend
+import MidimendCore
 
 // Under launchd/brew services stdout is a file: without this, messages sit
 // in stdio's full buffer and are lost on SIGTERM — the service log must

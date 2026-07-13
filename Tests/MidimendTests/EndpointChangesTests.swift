@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The plug/unplug log lines derived from comparing the previous and current
 /// sets of present hardware-endpoint names.

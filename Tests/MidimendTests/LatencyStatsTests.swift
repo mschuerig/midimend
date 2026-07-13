@@ -1,5 +1,5 @@
 import XCTest
-@testable import Midimend
+@testable import MidimendCore
 
 /// The aggregation behind --measure: collects per-event latency samples
 /// (nanoseconds) and renders a percentile summary. "queue" is driver receipt
