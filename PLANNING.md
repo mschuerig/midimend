@@ -96,7 +96,12 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
-   - **Status:** v0.2.0 (2026-07-12) is the released state — adds the
+   - **Status:** v0.2.1 (2026-07-13) is the released state — fixes
+     hot-plug (dispatchMain ran no CFRunLoop, so setup-change
+     notifications never fired), adds plug/unplug and connect-failure
+     logging, and lands the test backlog (92 tests incl. the e2e
+     subprocess layer); brew-upgraded, service restarted, and log
+     verified on Michael's machine. Previous: v0.2.0 (2026-07-12) — adds the
      v0.x latency work (`--measure`, strict `sendAfterMilliseconds`
      timers, idle-time GC, interactive-tier service); upgraded, service
      restarted with the ProcessType Interactive plist, and log verified
