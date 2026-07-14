@@ -192,9 +192,11 @@ as few surprises as possible, and problems must be easy to diagnose.
      Discovered during smoke: `"feedback": "all"` without
      `"ignore": ["DAW"]` reaches DAW-control ports — the example config
      now carries the ignore entry as model practice.
-     Still untested: the real MainStage round trip (re-select
-     "Send Value to" per control, LED rings following patch changes) —
-     needs Michael at the GUI.
+     Verified live (2026-07-15, Michael's rig): MainStage offers
+     "Send Value to: Midimend Out", re-selecting it per control fixed the
+     stale direct-to-XTM assignments, and the XTM's rings follow —
+     including feedback for MiniLab knob turns, which reaches the XTM via
+     `"feedback": "all"`.
 
 ## v1 — timing
 
