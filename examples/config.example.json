@@ -6,7 +6,7 @@
       { "virtual": "Midimend In" }
     ],
     "outputs": [
-      { "virtual": "Midimend Out" }
+      { "virtual": "Midimend" }
     ],
     "feedback": "all",
     "ignore": ["DAW"]

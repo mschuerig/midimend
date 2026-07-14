@@ -172,6 +172,15 @@ as few surprises as possible, and problems must be easy to diagnose.
      Migrating users must re-select "Send Value to: Midimend Out" per
      control once the paired destination exists — that overwrites the
      stale entry.
+   - **Port name (decided 2026-07-15):** the default virtual port is plain
+     **"Midimend"**, not "Midimend Out" — since feedback it is a
+     name-paired source/destination duo, and a direction suffix misnames
+     one side (hardware sets the precedent: "X-TOUCH MINI" both ways).
+     Renamed *before* the first release that ships feedback, so the
+     paired name never shipped otherwise. Cost, accepted: unique IDs are
+     name-derived, so existing DAW bindings to "Midimend Out" don't
+     re-bind — controls must be re-selected once (config names are the
+     user's own; only the `--init` default and docs changed).
    - **As implemented:** `FeedbackSpec` (`.all` / `.devices([...])`,
      custom Codable rejecting strings other than `"all"`); an empty
      device list counts as unconfigured, same as omitting the key.

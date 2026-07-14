@@ -81,7 +81,7 @@ swift build -c release
       { "virtual": "Midimend In" }        // create a virtual port other apps can send to
     ],
     "outputs": [
-      { "virtual": "Midimend Out" }       // virtual port; select as input in your DAW
+      { "virtual": "Midimend" }           // virtual port; select as input in your DAW
       // { "hardware": "some device" }    // ...or send to a hardware destination
     ],
     "feedback": "all",                    // return the DAW's parameter feedback to all devices
@@ -110,7 +110,7 @@ watched — saving either hot-reloads the script and re-fires
 Changing the `midi` section requires a restart.
 
 In MainStage, set your layout objects' MIDI input to the virtual output port
-(e.g. "Midimend Out") so the raw hardware events are ignored; in Logic,
+(e.g. "Midimend") so the raw hardware events are ignored; in Logic,
 use the track inspector's MIDI In Port. Do this *before* using Learn — Learn
 binds to whichever port's message arrives first.
 
@@ -125,7 +125,7 @@ except ignored ones) or an explicit list like
 `[{ "hardware": "X-TOUCH" }]`. Omit the key and neither the companion port
 nor the feedback path exists.
 
-In MainStage, choose the virtual port (e.g. "Midimend Out") as the screen
+In MainStage, choose the virtual port (e.g. "Midimend") as the screen
 control's **Send Value to** in layout mode. If a control's feedback used to
 go to the hardware port directly, re-select its "Send Value to" after
 switching — MainStage keeps the old feedback route active even though the

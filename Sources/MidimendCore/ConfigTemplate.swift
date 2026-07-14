@@ -6,7 +6,9 @@ import Foundation
 /// parameter with its default value, in script order.
 public enum ConfigTemplate {
     public static let inputPlaceholder = "your controller's name — run: midimend --list-devices"
-    public static let virtualOutputName = "Midimend Out"
+    /// Plain "Midimend": the port is a name-paired source/destination duo
+    /// (parameter feedback), so a direction suffix would misname one side.
+    public static let virtualOutputName = "Midimend"
 
     public static func render(scriptPath: String, parameters: [ParameterDefinition]) -> String {
         var lines = [

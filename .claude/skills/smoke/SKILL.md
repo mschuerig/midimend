@@ -24,8 +24,8 @@ through failures so the report is complete; lead with any failure.
    `.build/debug/midimend examples/config.example.json` in the
    background, wait ~1.5 s, SIGINT it, and check the captured output
    for:
-   - `Created virtual input: Midimend In` / `Created virtual output: Midimend Out`
-   - `Created feedback port for: Midimend Out`, and a `Feedback outputs: …`
+   - `Created virtual input: Midimend In` / `Created virtual output: Midimend`
+   - `Created feedback port for: Midimend`, and a `Feedback outputs: …`
      line listing the present (non-ignored) destinations — the example
      config sets `"feedback": "all"`
    - `Connected input: Minilab37 MIDI` when the MiniLab is attached —

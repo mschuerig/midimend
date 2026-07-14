@@ -26,6 +26,15 @@ final class ConfigTemplateTests: XCTestCase {
         XCTAssertFalse(config.midi.outputs.isEmpty, "skeleton should propose a virtual output")
     }
 
+    /// Plain "Midimend", not "Midimend Out": the port is a name-paired
+    /// source/destination duo since parameter feedback, so a direction
+    /// suffix would be wrong for one of the two.
+    func testVirtualOutputIsNamedPlainMidimend() throws {
+        let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [])
+        XCTAssertEqual(try decode(rendered).midi.outputs,
+                       [EndpointSpec(virtualName: "Midimend")])
+    }
+
     /// The generated default is feedback-on and *explicit*: the behavior must
     /// be readable in the config file, never implicit.
     func testSkeletonEmitsExplicitFeedbackAll() throws {
