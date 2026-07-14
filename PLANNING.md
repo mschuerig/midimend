@@ -126,6 +126,76 @@ as few surprises as possible, and problems must be easy to diagnose.
      stapled; Gatekeeper fetches the notarization ticket online, or ship
      a `.pkg`/`.dmg` if offline install matters.
 
+6. **Parameter feedback.** (done — 2026-07-15) Let DAWs send screen-control/parameter feedback
+   back through Midimend to the controllers (MainStage "Send Value to" →
+   X-Touch Mini LED rings). Mechanism: each virtual output gets a **paired
+   virtual destination with the same name** — MainStage pairs
+   source/destination by name (verified empirically 2026-07-15), which
+   enables its "Send Value to" popup for the Midimend port. Events arriving
+   on a paired destination form the *feedback path*: forwarded to the
+   configured feedback devices' destinations, and **never** to our own
+   virtual sources (loop guard — otherwise the DAW's feedback re-enters it
+   as input).
+   - **Config:** `"feedback"` in the `midi` section, sibling of
+     `inputs`/`outputs`. Either `"all"` — all hardware destinations,
+     `ignore` still wins, mirroring the omitted-`inputs` rule — or a list
+     of `{ "hardware": … }` specs. Key omitted or empty → no paired
+     destinations, exactly today's behavior. Decided: no automatic/implicit
+     mode — what Midimend sends must be readable in the config file. But
+     `--init` emits `"feedback": "all"`, so the *generated* default is
+     feedback-on and explicit: Michael's rigs vary (MiniLab at the desk;
+     MP11 + Osmose + XTM; occasional percussion devices and borrowed gear)
+     and one config must just work with whatever is plugged in; sending
+     feedback to all devices was assessed harmless, and the config line is
+     there to narrow if a device ever misbehaves. Feedback is a one-way
+     stream with no per-device addressing — routing per controller would
+     require one virtual port per controller (postponed; the global list
+     upgrades compatibly to a per-output override if that rig ever exists).
+   - **Routing (MIDIIO):** the single broadcast send splits into two
+     routes — forward (inputs → script → virtual sources + hardware output
+     specs) and feedback (paired destinations → feedback destinations).
+     Paired destinations get their own receive blocks (per-destination
+     tagging); system real-time arriving on the feedback path follows the
+     feedback route.
+   - **No script on the feedback path** (this iteration): MainStage echoes
+     the same CCs a control sends, which is exactly what LED rings expect;
+     a feedback/reverse script is parked in IDEAS.md.
+   - **Diagnosis:** `--list-devices` shows what `feedback` matches; a
+     configured feedback device that isn't present warns at startup like
+     inputs/outputs do.
+   - **Background (2026-07-15, decoded from a concert's
+     `workspace.layout`):** MainStage stores "MIDI Port"
+     (`controllerMapping`) and "Send Value to"
+     (`outputControllerAssignment`) independently; switching a control's
+     port to Midimend Out leaves stale direct-to-device feedback
+     assignments *active* while the inspector shows "None (disabled)".
+     Migrating users must re-select "Send Value to: Midimend Out" per
+     control once the paired destination exists — that overwrites the
+     stale entry.
+   - **As implemented:** `FeedbackSpec` (`.all` / `.devices([...])`,
+     custom Codable rejecting strings other than `"all"`); an empty
+     device list counts as unconfigured, same as omitting the key.
+     Matching/diagnosis rules live in `EndpointSelection`
+     (`feedback(_:)`, `feedbackConfigured`, `unmatchedFeedbackPatterns`)
+     — the pure, shared seam, as before. The feedback route forwards the
+     received `MIDIEventList` pointer directly to the feedback
+     destinations on the CoreMIDI receive thread: no parse/rebuild, no
+     `jsQueue` hop, timestamps preserved, and real-time messages need no
+     special-casing. Paired destinations get stable unique IDs (key
+     `feedback:<name>`) and are excluded from *all* hardware-destination
+     enumeration via `isOwnDestination` — in `"all"` mode a paired
+     destination would otherwise match itself and re-enter its own
+     handler. `--list-devices` annotates destinations with
+     `feedback (matched by …)` / `feedback ("feedback": "all")`.
+     E2e-tested: an event sent to the paired destination reaches the
+     configured device and does *not* come back out the virtual source.
+     Discovered during smoke: `"feedback": "all"` without
+     `"ignore": ["DAW"]` reaches DAW-control ports — the example config
+     now carries the ignore entry as model practice.
+     Still untested: the real MainStage round trip (re-select
+     "Send Value to" per control, LED rings following patch changes) —
+     needs Michael at the GUI.
+
 ## v1 — timing
 
 Internal transport (tempo/meter/auto-play from config), `TimingInfo`,

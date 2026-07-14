@@ -52,9 +52,12 @@ func listDevices(configPath: String?) throws {
                 missing: selection?.unmatchedInputPatterns(among: devices.sources) ?? [])
         .forEach { print($0) }
     print("")
+    let missingDestinationPatterns = (selection?.unmatchedOutputPatterns(among: devices.destinations) ?? [])
+        + (selection?.unmatchedFeedbackPatterns(among: devices.destinations) ?? [])
     deviceLines(title: "MIDI outputs (destinations)", names: devices.destinations,
                 verdict: selection.map { s in { s.output($0) } },
-                missing: selection?.unmatchedOutputPatterns(among: devices.destinations) ?? [])
+                feedback: selection.map { s in { s.feedback($0) } },
+                missing: missingDestinationPatterns)
         .forEach { print($0) }
 }
 

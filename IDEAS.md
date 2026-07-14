@@ -81,6 +81,24 @@ as normal musical data. Swallow regardless of whether the switch found a
 preset — the behavior is about the channel's control-plane role, not about
 whether the switch succeeded (otherwise the buttons leak "sometimes").
 
+## Feedback-path script
+
+Run a script on the parameter-feedback path (DAW → paired virtual
+destination → controllers), mirroring the forward path. Needed only when a
+forward script *renumbers* the controls a DAW echoes back — then feedback
+must be reverse-mapped before it reaches the controller. Plain LED-ring
+feedback (X-Touch Mini) needs pass-through only, which is what the feedback
+feature ships with.
+
+- **Engine model**: a second, independent `ScriptEngine` instance on the
+  feedback path (own `JSContext`; can share the `JSVirtualMachine`). The
+  Scripter API is directionless, so the same API works — but state is *not*
+  shared with the forward script; a script that needs to correlate both
+  directions has no home yet (and no use case).
+- **Config**: `"feedback"` grows from `"all"`/list into an object,
+  e.g. `{ "script": "reverse.js", "outputs": "all" }` — decide the exact
+  shape when a use case exists.
+
 ## Menu bar app shell
 
 A finicky-style shell (<https://github.com/johnste/finicky>): no window,

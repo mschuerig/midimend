@@ -111,6 +111,56 @@ final class DeviceLinesTests: XCTestCase {
         ])
     }
 
+    // MARK: - Feedback annotations (destinations section)
+
+    func testFeedbackListAnnotation() {
+        let lines = deviceLines(
+            title: "MIDI outputs (destinations)",
+            names: ["X-TOUCH MINI", "Minilab37 MIDI"],
+            verdict: { _ in .notMatched },
+            feedback: { name in
+                name == "X-TOUCH MINI" ? .connected(pattern: "X-TOUCH") : .notMatched
+            },
+            missing: []
+        )
+        XCTAssertEqual(lines, [
+            "MIDI outputs (destinations):",
+            "  X-TOUCH MINI  — feedback (matched by \"X-TOUCH\")",
+            "  Minilab37 MIDI",
+        ])
+    }
+
+    func testFeedbackAllAnnotation() {
+        let lines = deviceLines(
+            title: "MIDI outputs (destinations)",
+            names: ["X-TOUCH MINI", "Minilab37 DAW"],
+            verdict: { _ in .notMatched },
+            feedback: { name in
+                name == "Minilab37 DAW" ? .ignored(pattern: "DAW") : .connected(pattern: nil)
+            },
+            missing: []
+        )
+        XCTAssertEqual(lines, [
+            "MIDI outputs (destinations):",
+            "  X-TOUCH MINI  — feedback (\"feedback\": \"all\")",
+            "  Minilab37 DAW",
+        ])
+    }
+
+    func testForwardOutputAndFeedbackAnnotationsCombine() {
+        let lines = deviceLines(
+            title: "MIDI outputs (destinations)",
+            names: ["Synth"],
+            verdict: { _ in .connected(pattern: "Synth") },
+            feedback: { _ in .connected(pattern: nil) },
+            missing: []
+        )
+        XCTAssertEqual(lines, [
+            "MIDI outputs (destinations):",
+            "  Synth  — matched by \"Synth\", feedback (\"feedback\": \"all\")",
+        ])
+    }
+
     func testNoDevicesAndNoConfig() {
         XCTAssertEqual(
             deviceLines(title: "MIDI outputs (destinations)", names: [], verdict: nil, missing: []),

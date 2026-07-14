@@ -25,6 +25,9 @@ through failures so the report is complete; lead with any failure.
    background, wait ~1.5 s, SIGINT it, and check the captured output
    for:
    - `Created virtual input: Midimend In` / `Created virtual output: Midimend Out`
+   - `Created feedback port for: Midimend Out`, and a `Feedback outputs: …`
+     line listing the present (non-ignored) destinations — the example
+     config sets `"feedback": "all"`
    - `Connected input: Minilab37 MIDI` when the MiniLab is attached —
      if it isn't, expect instead the warning that lists present inputs
      (that's a pass for the warning path, note it as such)

@@ -13,12 +13,34 @@ public struct EndpointSelection: Sendable {
     /// nil = default-all-inputs mode.
     private let inputPatterns: [String]?
     private let outputPatterns: [String]
+    /// nil = no feedback path; empty = "all" mode (mirrors inputPatterns nil).
+    private let feedbackPatterns: [String]?
+    private let feedbackAll: Bool
     private let ignorePatterns: [String]
 
     public init(setup: MIDISetup) {
         inputPatterns = setup.inputs.map { $0.compactMap(\.hardware) }
         outputPatterns = setup.outputs.compactMap(\.hardware)
+        switch setup.feedback {
+        case .all:
+            feedbackAll = true
+            feedbackPatterns = nil
+        case .devices(let specs):
+            feedbackAll = false
+            // An empty list is "configured off" — same as omitting the key.
+            let patterns = specs.compactMap(\.hardware)
+            feedbackPatterns = patterns.isEmpty ? nil : patterns
+        case nil:
+            feedbackAll = false
+            feedbackPatterns = nil
+        }
         ignorePatterns = setup.ignore ?? []
+    }
+
+    /// Whether a feedback path exists at all — MIDIIO creates the paired
+    /// virtual destinations only when it does.
+    public var feedbackConfigured: Bool {
+        feedbackAll || feedbackPatterns != nil
     }
 
     public func input(_ name: String) -> Verdict {
@@ -38,10 +60,24 @@ public struct EndpointSelection: Sendable {
         return .notMatched
     }
 
+    public func feedback(_ name: String) -> Verdict {
+        guard feedbackConfigured else { return .notMatched }
+        if let pattern = ignoreMatch(name) { return .ignored(pattern: pattern) }
+        if feedbackAll { return .connected(pattern: nil) }
+        if let pattern = feedbackPatterns?.first(where: { midiNameMatches(name, pattern: $0) }) {
+            return .connected(pattern: pattern)
+        }
+        return .notMatched
+    }
+
     /// Configured patterns that no present, non-ignored device satisfies —
     /// the ones worth a diagnosis message.
     public func unmatchedInputPatterns(among names: [String]) -> [String] {
         unmatched(inputPatterns ?? [], among: names)
+    }
+
+    public func unmatchedFeedbackPatterns(among names: [String]) -> [String] {
+        unmatched(feedbackPatterns ?? [], among: names)
     }
 
     public func unmatchedOutputPatterns(among names: [String]) -> [String] {

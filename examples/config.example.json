@@ -7,7 +7,9 @@
     ],
     "outputs": [
       { "virtual": "Midimend Out" }
-    ]
+    ],
+    "feedback": "all",
+    "ignore": ["DAW"]
   },
   "parameters": {
     "Source Patch CC": 114,

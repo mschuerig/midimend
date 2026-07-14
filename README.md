@@ -84,6 +84,8 @@ swift build -c release
       { "virtual": "Midimend Out" }       // virtual port; select as input in your DAW
       // { "hardware": "some device" }    // ...or send to a hardware destination
     ],
+    "feedback": "all",                    // return the DAW's parameter feedback to all devices
+                                          // ("all", or a device list like "inputs"; omit to disable)
     "ignore": ["DAW"]                     // devices to leave alone entirely (substring match)
   },
   "parameters": {                          // values for the script's PluginParameters, by name
@@ -111,6 +113,23 @@ In MainStage, set your layout objects' MIDI input to the virtual output port
 (e.g. "Midimend Out") so the raw hardware events are ignored; in Logic,
 use the track inspector's MIDI In Port. Do this *before* using Learn — Learn
 binds to whichever port's message arrives first.
+
+### Parameter feedback
+
+Controllers with LED rings, button lights, or motor faders expect the DAW
+to send values *back* — e.g. so encoder rings show the parameter after a
+patch change. With `"feedback"` configured, each virtual output gets a
+same-named companion port that DAWs can send to; whatever arrives there is
+passed through, unchanged, to the feedback devices — `"all"` (every device
+except ignored ones) or an explicit list like
+`[{ "hardware": "X-TOUCH" }]`. Omit the key and neither the companion port
+nor the feedback path exists.
+
+In MainStage, choose the virtual port (e.g. "Midimend Out") as the screen
+control's **Send Value to** in layout mode. If a control's feedback used to
+go to the hardware port directly, re-select its "Send Value to" after
+switching — MainStage keeps the old feedback route active even though the
+popup shows "None" for it.
 
 ## Supported script API (v0)
 

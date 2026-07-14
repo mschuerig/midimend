@@ -178,4 +178,118 @@ final class EndToEndTests: XCTestCase {
         probeClient = 0
         expectOutput(containing: "MIDI input disappeared: \(probeName)")
     }
+
+    /// Parameter feedback: a DAW sends values to the virtual output's paired
+    /// destination; midimend must forward them to the configured feedback
+    /// device — and must NOT emit them on its own virtual source, which
+    /// would loop them straight back into the DAW as input.
+    func testFeedbackReachesControllerAndDoesNotLoopToDAW() throws {
+        try makeProbeClient()
+
+        /// Words received on an endpoint this test owns.
+        final class WordCollector: @unchecked Sendable {
+            private let lock = NSLock()
+            private var storage: [UInt32] = []
+            func append(_ words: [UInt32]) {
+                lock.lock()
+                storage += words
+                lock.unlock()
+            }
+            var words: [UInt32] {
+                lock.lock()
+                defer { lock.unlock() }
+                return storage
+            }
+        }
+        func collect(_ eventList: UnsafePointer<MIDIEventList>, into collector: WordCollector) {
+            for packet in eventList.unsafeSequence() {
+                let count = Int(packet.pointee.wordCount)
+                collector.append(withUnsafeBytes(of: packet.pointee.words) { raw in
+                    Array(raw.bindMemory(to: UInt32.self).prefix(count))
+                })
+            }
+        }
+
+        // The fake controller: a virtual destination owned by this process,
+        // where the configured feedback must arrive.
+        let controllerName = "Midimend E2E Ctrl \(ProcessInfo.processInfo.processIdentifier)"
+        let controllerReceived = WordCollector()
+        var controller = MIDIEndpointRef()
+        let controllerStatus = MIDIDestinationCreateWithProtocol(
+            probeClient, controllerName as CFString, ._1_0, &controller
+        ) { eventList, _ in collect(eventList, into: controllerReceived) }
+        guard controllerStatus == noErr else {
+            throw XCTSkip("cannot create virtual destination (MIDIDestinationCreate: \(controllerStatus))")
+        }
+
+        let script = "function HandleMIDI(e) { e.send(); }"
+        try script.write(to: directory.appendingPathComponent("test.js"),
+                         atomically: true, encoding: .utf8)
+        let virtualOut = "Midimend E2E Out \(ProcessInfo.processInfo.processIdentifier)"
+        let config = """
+        {
+          "script": "test.js",
+          "midi": {
+            "inputs": [],
+            "outputs": [ { "virtual": "\(virtualOut)" } ],
+            "feedback": [ { "hardware": "\(controllerName)" } ]
+          }
+        }
+        """
+        let configPath = directory.appendingPathComponent("config.json").path
+        try config.write(toFile: configPath, atomically: true, encoding: .utf8)
+        try launchMidimend(arguments: [configPath])
+        expectOutput(containing: "midimend running")
+        expectOutput(containing: "Feedback outputs: \(controllerName)")
+
+        // The DAW side of the loop guard: listen on midimend's virtual source.
+        let dawReceived = WordCollector()
+        var listenPort = MIDIPortRef()
+        XCTAssertEqual(MIDIInputPortCreateWithProtocol(
+            probeClient, "e2e listen" as CFString, ._1_0, &listenPort
+        ) { eventList, _ in collect(eventList, into: dawReceived) }, noErr)
+
+        func findEndpoint(named name: String, count: Int, get: (Int) -> MIDIEndpointRef) -> MIDIEndpointRef? {
+            (0..<count).map(get).first { $0 != 0 && midiDisplayName($0) == name }
+        }
+        let deadline = Date(timeIntervalSinceNow: 5)
+        var pairedDestination = MIDIEndpointRef()
+        var virtualSource = MIDIEndpointRef()
+        while Date() < deadline, pairedDestination == 0 || virtualSource == 0 {
+            pairedDestination = findEndpoint(named: virtualOut, count: MIDIGetNumberOfDestinations(),
+                                             get: MIDIGetDestination) ?? 0
+            virtualSource = findEndpoint(named: virtualOut, count: MIDIGetNumberOfSources(),
+                                         get: MIDIGetSource) ?? 0
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        XCTAssertNotEqual(pairedDestination, 0,
+                          "no destination named \(virtualOut) — paired destination not created")
+        XCTAssertNotEqual(virtualSource, 0)
+        XCTAssertEqual(MIDIPortConnectSource(listenPort, virtualSource, nil), noErr)
+
+        // "MainStage sends feedback": CC 20 value 64 to the paired destination.
+        var sendPort = MIDIPortRef()
+        XCTAssertEqual(MIDIOutputPortCreate(probeClient, "e2e send" as CFString, &sendPort), noErr)
+        var eventList = MIDIEventList()
+        let packet = MIDIEventListInit(&eventList, ._1_0)
+        var word: UInt32 = 0x20B0_1440  // MIDI 1.0 channel voice: CC ch1 #20 val 64
+        withUnsafePointer(to: &word) { pointer in
+            _ = MIDIEventListAdd(&eventList, MemoryLayout<MIDIEventList>.size,
+                                 packet, 0, 1, pointer)
+        }
+        XCTAssertEqual(MIDISendEventList(sendPort, pairedDestination, &eventList), noErr)
+
+        // Must arrive at the controller...
+        let receiveDeadline = Date(timeIntervalSinceNow: 5)
+        while Date() < receiveDeadline, !controllerReceived.words.contains(0x20B0_1440) {
+            Thread.sleep(forTimeInterval: 0.05)
+        }
+        XCTAssertTrue(controllerReceived.words.contains(0x20B0_1440),
+                      "feedback event did not reach the controller; got \(controllerReceived.words)")
+
+        // ...and must NOT have come back out of the virtual source.
+        Thread.sleep(forTimeInterval: 0.3)
+        XCTAssertTrue(dawReceived.words.isEmpty,
+                      "feedback looped back to the DAW side: \(dawReceived.words)")
+    }
 }

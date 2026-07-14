@@ -58,18 +58,60 @@ public struct EndpointSpec: Codable, Equatable, Sendable {
     }
 }
 
+/// Where parameter feedback goes: events a DAW sends to a virtual output's
+/// paired destination (e.g. MainStage's "Send Value to") are forwarded to
+/// these hardware destinations. `"all"` mirrors the omitted-`inputs` rule:
+/// every hardware destination except ignored ones and our own virtual ports.
+public enum FeedbackSpec: Equatable, Sendable, Codable {
+    case all
+    case devices([EndpointSpec])
+
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let devices = try? container.decode([EndpointSpec].self) {
+            self = .devices(devices)
+        } else {
+            let string = try container.decode(String.self)
+            guard string == "all" else {
+                throw DecodingError.dataCorruptedError(
+                    in: container,
+                    debugDescription: #""feedback" must be "all" or a list of { "hardware": … } entries"#
+                )
+            }
+            self = .all
+        }
+    }
+
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.singleValueContainer()
+        switch self {
+        case .all: try container.encode("all")
+        case .devices(let devices): try container.encode(devices)
+        }
+    }
+}
+
 public struct MIDISetup: Codable, Equatable, Sendable {
     /// nil (key omitted) means: connect all hardware inputs except ignored
     /// ones and our own virtual ports.
     public var inputs: [EndpointSpec]?
     public var outputs: [EndpointSpec]
+    /// nil (key omitted) or an empty list means: no feedback path, and no
+    /// paired virtual destinations are created.
+    public var feedback: FeedbackSpec?
     /// Devices to leave alone entirely (same substring matching as
     /// `hardware`) — e.g. a controller's DAW-control port.
     public var ignore: [String]?
 
-    public init(inputs: [EndpointSpec]? = nil, outputs: [EndpointSpec], ignore: [String]? = nil) {
+    public init(
+        inputs: [EndpointSpec]? = nil,
+        outputs: [EndpointSpec],
+        feedback: FeedbackSpec? = nil,
+        ignore: [String]? = nil
+    ) {
         self.inputs = inputs
         self.outputs = outputs
+        self.feedback = feedback
         self.ignore = ignore
     }
 }

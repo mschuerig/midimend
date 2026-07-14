@@ -26,6 +26,14 @@ final class ConfigTemplateTests: XCTestCase {
         XCTAssertFalse(config.midi.outputs.isEmpty, "skeleton should propose a virtual output")
     }
 
+    /// The generated default is feedback-on and *explicit*: the behavior must
+    /// be readable in the config file, never implicit.
+    func testSkeletonEmitsExplicitFeedbackAll() throws {
+        let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [])
+        XCTAssertEqual(try decode(rendered).midi.feedback, .all)
+        XCTAssertTrue(rendered.contains("\"feedback\": \"all\""))
+    }
+
     func testSliderBecomesNumber() throws {
         let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [
             definition(name: "Source CC", defaultValue: 16),

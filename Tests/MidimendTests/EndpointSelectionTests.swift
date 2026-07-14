@@ -9,12 +9,14 @@ final class EndpointSelectionTests: XCTestCase {
     private func selection(
         inputs: [String]? = [],
         outputs: [String] = [],
+        feedback: FeedbackSpec? = nil,
         ignore: [String] = []
     ) -> EndpointSelection {
         EndpointSelection(
             setup: MIDISetup(
                 inputs: inputs.map { $0.map { EndpointSpec(hardware: $0) } },
                 outputs: outputs.map { EndpointSpec(hardware: $0) },
+                feedback: feedback,
                 ignore: ignore.isEmpty ? nil : ignore
             )
         )
@@ -65,6 +67,49 @@ final class EndpointSelectionTests: XCTestCase {
     func testIgnoreMatchingIsCaseInsensitiveSubstring() {
         let selection = selection(inputs: nil, ignore: ["daw"])
         XCTAssertEqual(selection.input("Minilab37 DAW"), .ignored(pattern: "daw"))
+    }
+
+    // MARK: - Feedback (paired destinations → controllers)
+
+    func testUnconfiguredFeedbackMatchesNothing() {
+        let selection = selection(feedback: nil)
+        XCTAssertFalse(selection.feedbackConfigured)
+        XCTAssertEqual(selection.feedback("X-TOUCH MINI"), .notMatched)
+    }
+
+    func testEmptyFeedbackListCountsAsUnconfigured() {
+        let selection = selection(feedback: .devices([]))
+        XCTAssertFalse(selection.feedbackConfigured)
+        XCTAssertEqual(selection.feedback("X-TOUCH MINI"), .notMatched)
+    }
+
+    func testFeedbackAllMatchesEverythingExceptIgnored() {
+        let selection = selection(feedback: .all, ignore: ["DAW"])
+        XCTAssertTrue(selection.feedbackConfigured)
+        XCTAssertEqual(selection.feedback("X-TOUCH MINI"), .connected(pattern: nil))
+        XCTAssertEqual(selection.feedback("Minilab37 DAW"), .ignored(pattern: "DAW"))
+    }
+
+    func testFeedbackDeviceListMatchesLikeOutputs() {
+        let selection = selection(
+            feedback: .devices([EndpointSpec(hardware: "X-TOUCH")]),
+            ignore: ["DAW"]
+        )
+        XCTAssertTrue(selection.feedbackConfigured)
+        XCTAssertEqual(selection.feedback("X-TOUCH MINI"), .connected(pattern: "X-TOUCH"))
+        XCTAssertEqual(selection.feedback("Minilab37 MIDI"), .notMatched)
+        XCTAssertEqual(selection.feedback("X-TOUCH DAW"), .ignored(pattern: "DAW"))
+    }
+
+    func testUnmatchedFeedbackPatterns() {
+        let selection = selection(feedback: .devices([EndpointSpec(hardware: "X-TOUCH")]))
+        XCTAssertEqual(selection.unmatchedFeedbackPatterns(among: ["Minilab37 MIDI"]), ["X-TOUCH"])
+        XCTAssertEqual(selection.unmatchedFeedbackPatterns(among: ["X-TOUCH MINI"]), [])
+    }
+
+    func testUnmatchedFeedbackPatternsInAllModeIsEmpty() {
+        let selection = selection(feedback: .all)
+        XCTAssertEqual(selection.unmatchedFeedbackPatterns(among: []), [])
     }
 
     // MARK: - Unmatched-pattern diagnosis

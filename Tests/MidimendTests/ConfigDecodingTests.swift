@@ -35,6 +35,53 @@ final class ConfigDecodingTests: XCTestCase {
         XCTAssertNil(config.midi.ignore)
     }
 
+    // MARK: - Feedback (DAW → paired virtual destination → controllers)
+
+    func testFeedbackAllDecodesFromString() throws {
+        let config = try decode("""
+        { "script": "s.js", "midi": { "outputs": [{ "virtual": "Out" }], "feedback": "all" } }
+        """)
+        XCTAssertEqual(config.midi.feedback, .all)
+    }
+
+    func testFeedbackDeviceListDecodesAsEndpointSpecs() throws {
+        let config = try decode("""
+        {
+          "script": "s.js",
+          "midi": {
+            "outputs": [{ "virtual": "Out" }],
+            "feedback": [{ "hardware": "X-TOUCH" }, { "hardware": "Launchpad" }]
+          }
+        }
+        """)
+        XCTAssertEqual(config.midi.feedback, .devices([
+            EndpointSpec(hardware: "X-TOUCH"),
+            EndpointSpec(hardware: "Launchpad"),
+        ]))
+    }
+
+    func testOmittedFeedbackDecodesAsNil() throws {
+        let config = try decode("""
+        { "script": "s.js", "midi": { "outputs": [{ "virtual": "Out" }] } }
+        """)
+        XCTAssertNil(config.midi.feedback)
+    }
+
+    func testFeedbackRejectsUnknownString() throws {
+        XCTAssertThrowsError(try decode("""
+        { "script": "s.js", "midi": { "outputs": [], "feedback": "everything" } }
+        """))
+    }
+
+    /// The restart-to-apply note depends on MIDISetup equality noticing
+    /// feedback changes.
+    func testFeedbackParticipatesInMIDISetupEquality() {
+        let without = MIDISetup(outputs: [])
+        var with = MIDISetup(outputs: [])
+        with.feedback = .all
+        XCTAssertNotEqual(without, with)
+    }
+
     func testParameterValueKinds() throws {
         let config = try decode("""
         {

@@ -1,4 +1,4 @@
-.Dd July 12, 2026
+.Dd July 15, 2026
 .Dt MIDIMEND 1
 .Os
 .Sh NAME
@@ -22,6 +22,11 @@ connects to MIDI sources, runs a JavaScript processing script per event,
 and emits the mended stream on a virtual output port that a DAW uses as
 its input.
 Scripts use the same JavaScript API as the Scripter MIDI plug-in.
+With
+.Ql feedback
+configured, the virtual output gets a same-named companion port; parameter
+feedback a DAW sends there (control-surface LEDs, motor faders) is passed
+through to the configured devices.
 .Pp
 Without arguments,
 .Nm

@@ -19,6 +19,11 @@ public final class MIDIIO: @unchecked Sendable {
     private var outputPort = MIDIPortRef()
     private var virtualDestinations: [MIDIEndpointRef] = []
     private var virtualSources: [MIDIEndpointRef] = []
+    /// One per virtual output, same name: the port a DAW's parameter
+    /// feedback (e.g. MainStage "Send Value to") is addressed to. MainStage
+    /// pairs source and destination by name, so the shared name is what
+    /// enables its feedback popup for our port.
+    private var pairedDestinations: [MIDIEndpointRef] = []
 
     private let selection: EndpointSelection
     private let receive: ReceiveHandler
@@ -26,6 +31,7 @@ public final class MIDIIO: @unchecked Sendable {
 
     private let stateLock = NSLock()
     private var hardwareDestinations: [MIDIEndpointRef] = []
+    private var feedbackDestinations: [MIDIEndpointRef] = []
     private var connectedSourceIDs: Set<MIDIUniqueID> = []
     private var presentSourceNames: Set<String> = []
     private var presentDestinationNames: Set<String> = []
@@ -71,6 +77,15 @@ public final class MIDIIO: @unchecked Sendable {
             assignStableUniqueID(endpoint, key: "source:\(name)")
             virtualSources.append(endpoint)
             log("Created virtual output: \(name)")
+
+            guard selection.feedbackConfigured else { continue }
+            var paired = MIDIEndpointRef()
+            try check(MIDIDestinationCreateWithProtocol(client, name as CFString, ._1_0, &paired) { [weak self] eventList, _ in
+                self?.handleFeedback(eventList)
+            }, "MIDIDestinationCreate(feedback \(name))")
+            assignStableUniqueID(paired, key: "feedback:\(name)")
+            pairedDestinations.append(paired)
+            log("Created feedback port for: \(name)")
         }
 
         // Seed the plug/unplug snapshot with what's already present so startup
@@ -110,6 +125,21 @@ public final class MIDIIO: @unchecked Sendable {
         }
     }
 
+    // MARK: - Feedback (paired destinations → controllers)
+
+    /// Forwards everything a DAW sends to a paired destination, unmodified,
+    /// to the feedback destinations — and only there. Sending to our own
+    /// virtual sources would loop the DAW's feedback straight back into it
+    /// as input.
+    private func handleFeedback(_ eventList: UnsafePointer<MIDIEventList>) {
+        stateLock.lock()
+        let destinations = feedbackDestinations
+        stateLock.unlock()
+        for destination in destinations {
+            MIDISendEventList(outputPort, destination, eventList)
+        }
+    }
+
     // MARK: - Receiving
 
     private func handle(_ eventList: UnsafePointer<MIDIEventList>) {
@@ -139,6 +169,14 @@ public final class MIDIIO: @unchecked Sendable {
         logEndpointChanges()
         connectMatchingSources()
         resolveHardwareDestinations()
+        resolveFeedbackDestinations()
+    }
+
+    /// Destinations midimend itself owns — never "hardware", and in
+    /// feedback-"all" mode a paired destination must not match itself
+    /// (that would re-enter `handleFeedback` forever).
+    private func isOwnDestination(_ endpoint: MIDIEndpointRef) -> Bool {
+        virtualDestinations.contains(endpoint) || pairedDestinations.contains(endpoint)
     }
 
     /// Logs hardware endpoints that have appeared or disappeared since the last
@@ -174,7 +212,7 @@ public final class MIDIIO: @unchecked Sendable {
         var names: Set<String> = []
         for index in 0..<MIDIGetNumberOfDestinations() {
             let destination = MIDIGetDestination(index)
-            guard destination != 0, !virtualDestinations.contains(destination),
+            guard destination != 0, !isOwnDestination(destination),
                   let name = midiDisplayName(destination) else { continue }
             names.insert(name)
         }
@@ -220,7 +258,7 @@ public final class MIDIIO: @unchecked Sendable {
         var names: [String] = []
         for index in 0..<MIDIGetNumberOfDestinations() {
             let destination = MIDIGetDestination(index)
-            guard destination != 0, !virtualDestinations.contains(destination),
+            guard destination != 0, !isOwnDestination(destination),
                   let name = midiDisplayName(destination),
                   case .connected = selection.output(name) else { continue }
             found.append(destination)
@@ -235,6 +273,27 @@ public final class MIDIIO: @unchecked Sendable {
         }
     }
 
+    private func resolveFeedbackDestinations() {
+        guard selection.feedbackConfigured else { return }
+        var found: [MIDIEndpointRef] = []
+        var names: [String] = []
+        for index in 0..<MIDIGetNumberOfDestinations() {
+            let destination = MIDIGetDestination(index)
+            guard destination != 0, !isOwnDestination(destination),
+                  let name = midiDisplayName(destination),
+                  case .connected = selection.feedback(name) else { continue }
+            found.append(destination)
+            names.append(name)
+        }
+        stateLock.lock()
+        let changed = feedbackDestinations != found
+        feedbackDestinations = found
+        stateLock.unlock()
+        if changed {
+            log("Feedback outputs: \(names.isEmpty ? "none" : names.joined(separator: ", "))")
+        }
+    }
+
     /// Startup diagnosis: a configured device that isn't present gets a
     /// warning listing the devices that are. Not an error — the setup-change
     /// notification connects the device if it appears later.
@@ -246,13 +305,15 @@ public final class MIDIIO: @unchecked Sendable {
         }
         let destinationNames = (0..<MIDIGetNumberOfDestinations()).compactMap { index -> String? in
             let destination = MIDIGetDestination(index)
-            guard destination != 0, !virtualDestinations.contains(destination) else { return nil }
+            guard destination != 0, !isOwnDestination(destination) else { return nil }
             return midiDisplayName(destination)
         }
         warnUnmatched(selection.unmatchedInputPatterns(among: sourceNames),
                       present: sourceNames, kind: "input")
         warnUnmatched(selection.unmatchedOutputPatterns(among: destinationNames),
                       present: destinationNames, kind: "output")
+        warnUnmatched(selection.unmatchedFeedbackPatterns(among: destinationNames),
+                      present: destinationNames, kind: "feedback destination")
     }
 
     private func warnUnmatched(_ missing: [String], present: [String], kind: String) {

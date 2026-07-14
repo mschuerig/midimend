@@ -1,8 +1,9 @@
 import Foundation
 
 /// Renders a config-file skeleton for a script: a placeholder hardware
-/// input, the standard virtual output, and every configurable parameter
-/// with its default value, in script order.
+/// input, the standard virtual output, feedback to all devices (explicit,
+/// so the behavior is readable in the file), and every configurable
+/// parameter with its default value, in script order.
 public enum ConfigTemplate {
     public static let inputPlaceholder = "your controller's name — run: midimend --list-devices"
     public static let virtualOutputName = "Midimend Out"
@@ -17,7 +18,8 @@ public enum ConfigTemplate {
             "    ],",
             "    \"outputs\": [",
             "      { \"virtual\": \(jsonString(virtualOutputName)) }",
-            "    ]",
+            "    ],",
+            "    \"feedback\": \"all\"",
         ]
         let entries = parameters.compactMap(parameterLine)
         if entries.isEmpty {

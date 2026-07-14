@@ -40,11 +40,15 @@ public enum CLICommand: Equatable, Sendable {
 
 /// One --list-devices section as output lines: the title, each device with
 /// its verdict annotation, then a diagnosis line per unmatched pattern.
-/// verdict nil = no config given (bare listing).
+/// verdict nil = no config given (bare listing). `feedback` annotates the
+/// destinations section with the feedback-path verdict; only its
+/// `.connected` case adds anything (ignores are already annotated by the
+/// forward verdict).
 public func deviceLines(
     title: String,
     names: [String],
     verdict: ((String) -> EndpointSelection.Verdict)?,
+    feedback: ((String) -> EndpointSelection.Verdict)? = nil,
     missing: [String]
 ) -> [String] {
     var lines = ["\(title):"]
@@ -52,15 +56,29 @@ public func deviceLines(
         lines.append("  (none)")
     }
     for name in names {
+        var annotations: [String] = []
         switch verdict?(name) {
         case .connected(let pattern?):
-            lines.append("  \(name)  — matched by \"\(pattern)\"")
+            annotations.append("matched by \"\(pattern)\"")
         case .connected(nil):
-            lines.append("  \(name)  — connected (no \"inputs\" in config: all devices)")
+            annotations.append("connected (no \"inputs\" in config: all devices)")
         case .ignored(let pattern):
-            lines.append("  \(name)  — ignored by \"\(pattern)\"")
+            annotations.append("ignored by \"\(pattern)\"")
         case .notMatched, nil:
+            break
+        }
+        switch feedback?(name) {
+        case .connected(let pattern?):
+            annotations.append("feedback (matched by \"\(pattern)\")")
+        case .connected(nil):
+            annotations.append("feedback (\"feedback\": \"all\")")
+        case .ignored, .notMatched, nil:
+            break
+        }
+        if annotations.isEmpty {
             lines.append("  \(name)")
+        } else {
+            lines.append("  \(name)  — \(annotations.joined(separator: ", "))")
         }
     }
     for pattern in missing {
