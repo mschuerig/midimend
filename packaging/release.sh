@@ -44,7 +44,10 @@ cd "$(git rev-parse --show-toplevel)"
 DIST=".build/dist"
 VERSION_FILE="Sources/midimend-cli/main.swift"
 FORMULA="packaging/midimend.rb"
-TARBALL_URL="https://github.com/mschuerig/midimend/archive/refs/tags/$TAG.tar.gz"
+# The formula installs the notarized prebuilt binary from the release
+# asset, not the source tarball, so brew installs keep the Developer ID
+# signature.
+ASSET_URL="https://github.com/mschuerig/midimend/releases/download/$TAG/midimend-$TAG-macos.zip"
 TAP_DIR="${TAP_DIR:-$HOME/Projekte/homebrew-tap}"
 
 die() {
@@ -138,9 +141,9 @@ cmd_formula() {
     require_clean_tree
     [ -d "$TAP_DIR/.git" ] || die "tap clone not found at $TAP_DIR"
 
-    SHA="$(curl -fsL "$TARBALL_URL" | shasum -a 256 | cut -d' ' -f1)"
-    [ -n "$SHA" ] || die "could not hash $TARBALL_URL"
-    sed -i '' -E "s|^  url \".*\"$|  url \"$TARBALL_URL\"|" "$FORMULA"
+    SHA="$(curl -fsL "$ASSET_URL" | shasum -a 256 | cut -d' ' -f1)"
+    [ -n "$SHA" ] || die "could not hash $ASSET_URL"
+    sed -i '' -E "s|^  url \".*\"$|  url \"$ASSET_URL\"|" "$FORMULA"
     sed -i '' -E "s|^  sha256 \".*\"$|  sha256 \"$SHA\"|" "$FORMULA"
     grep -q "^  sha256 \"$SHA\"$" "$FORMULA" || die "could not update $FORMULA"
     if git diff --quiet -- "$FORMULA"; then

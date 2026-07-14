@@ -7,20 +7,32 @@
 class Midimend < Formula
   desc "Mend your MIDI before the DAW sees it"
   homepage "https://github.com/mschuerig/midimend"
-  url "https://github.com/mschuerig/midimend/archive/refs/tags/v0.2.1.tar.gz"
+  url "https://github.com/mschuerig/midimend/releases/download/v0.2.2/midimend-v0.2.2-macos.zip"
   sha256 "1c93ac6a604275de018e6744bd7dceacff36b91740f8dfa26fee5645d51757dc"
   license :public_domain
-  head "https://github.com/mschuerig/midimend.git", branch: "main"
 
-  depends_on xcode: ["16.0", :build]
+  head do
+    url "https://github.com/mschuerig/midimend.git", branch: "main"
+    depends_on xcode: ["16.0", :build]
+  end
+
   depends_on macos: :ventura
 
   def install
-    system "swift", "build", "--disable-sandbox", "-c", "release"
-    bin.install ".build/release/midimend"
-    man1.install "packaging/midimend.1"
-    zsh_completion.install "packaging/completions/_midimend"
-    bash_completion.install "packaging/completions/midimend.bash" => "midimend"
+    if build.head?
+      system "swift", "build", "--disable-sandbox", "-c", "release"
+      bin.install ".build/release/midimend"
+      man1.install "packaging/midimend.1"
+      zsh_completion.install "packaging/completions/_midimend"
+      bash_completion.install "packaging/completions/midimend.bash" => "midimend"
+    else
+      # The release asset is the Developer-ID-signed, notarized universal
+      # binary; installing it untouched preserves that signature.
+      bin.install "midimend"
+      man1.install "midimend.1"
+      zsh_completion.install "completions/_midimend"
+      bash_completion.install "completions/midimend.bash" => "midimend"
+    end
     pkgshare.install "examples"
   end
 
