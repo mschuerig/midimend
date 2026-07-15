@@ -96,7 +96,16 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
-   - **Status:** v0.2.1 (2026-07-13) is the released state — fixes
+   - **Status:** v0.3.0 (2026-07-15) is the released state — parameter
+     feedback (paired virtual destinations, `"feedback"` config) and the
+     port rename to plain "Midimend"; brew-upgraded, service restarted,
+     and log verified on Michael's machine. Known cosmetic quirk:
+     `--list-devices` runs out-of-process and annotates the *running
+     service's own* "Midimend" ports as connected/feedback targets — the
+     service itself excludes its own endpoints (by ref, in-process), the
+     listing just can't tell ownership. Possible polish: match endpoints'
+     unique IDs against the deterministic name-hash. Previous: v0.2.1
+     (2026-07-13) — fixes
      hot-plug (dispatchMain ran no CFRunLoop, so setup-change
      notifications never fired), adds plug/unplug and connect-failure
      logging, and lands the test backlog (92 tests incl. the e2e
