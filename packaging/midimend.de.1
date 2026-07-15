@@ -1,0 +1,90 @@
+.\" Deutsche Übersetzung von midimend.1 — bei Änderungen beide pflegen.
+.Dd 15. Juli 2026
+.Dt MIDIMEND 1
+.Os
+.Sh BEZEICHNUNG
+.Nm midimend
+.Nd MIDI zwischen CoreMIDI-Ports mit einem JavaScript-Skript zurechtflicken
+.\" Übersetzte Abschnittstitel schalten mdocs SYNOPSIS-Sonderformatierung
+.\" ab (Zeilenumbruch pro .Nm) — daher die expliziten .br.
+.Sh ÜBERSICHT
+.Nm
+.Op Ar config.json
+.br
+.Nm
+.Fl \-measure
+.Op Ar config.json
+.br
+.Nm
+.Fl \-list\-devices
+.Op Ar config.json
+.br
+.Nm
+.Fl \-init
+.Ar script.js
+.Sh BESCHREIBUNG
+.Nm
+verbindet sich mit MIDI-Quellen, lässt pro Ereignis ein
+JavaScript-Verarbeitungsskript laufen und gibt den reparierten Strom auf
+einem virtuellen Ausgangsport aus, den eine DAW als Eingang verwendet.
+Skripte verwenden dieselbe JavaScript-API wie das Scripter-MIDI-Plug-in.
+Mit konfiguriertem
+.Ql feedback
+bekommt der virtuelle Ausgang einen gleichnamigen Begleitport;
+Parameter-Feedback, das eine DAW dorthin sendet (LED-Kränze von
+Controllern, Motorfader), wird an die konfigurierten Geräte
+durchgereicht.
+.Pp
+Ohne Argumente führt
+.Nm
+die Konfiguration unter
+.Pa ~/Music/Midimend/config.json
+aus.
+Konfigurations- und Skriptdatei werden überwacht; beim Speichern wird das
+Skript neu geladen.
+Änderungen am
+.Ql midi
+-Abschnitt der Konfiguration erfordern einen Neustart.
+.Pp
+Die Optionen:
+.Bl -tag -width Fl
+.It Fl \-measure Op Ar config.json
+Normaler Betrieb; zusätzlich wird alle 10 Sekunden die von
+.Nm
+hinzugefügte Latenz ausgegeben: Perzentile vom Empfang im MIDI-Treiber
+bis zum Skripteintritt (der Queue-Sprung) und bis zum Ende der
+Verarbeitung (Versand daraus entstandener Ereignisse).
+.It Fl \-list\-devices Op Ar config.json
+Gibt die aktuell vorhandenen MIDI-Geräte aus.
+Mit Konfiguration wird zusätzlich gezeigt, welche Geräte ihre
+.Ql hardware
+-Einträge erfassen, welche ignoriert werden und welche Einträge
+nichts erfassen.
+.It Fl \-init Ar script.js
+Gibt ein Konfigurationsgerüst für das Skript auf stdout aus, mit
+den Vorgaben aus dessen
+.Ql PluginParameters .
+Skript-Warnungen gehen nach stderr, das JSON lässt sich also in eine
+Datei umleiten.
+.It Fl h , Fl \-help
+Gibt die Aufrufübersicht aus.
+.El
+.Sh DATEIEN
+.Bl -tag -width Pa
+.It Pa ~/Music/Midimend/config.json
+Standard-Konfiguration; wird verwendet, wenn
+.Nm
+ohne Argumente startet (wie durch
+.Ql brew services start midimend ) .
+.El
+.Sh BEISPIELE
+Eine Konfiguration für ein Skript beginnen, dann nachsehen, was
+angeschlossen ist:
+.Bd -literal -offset indent
+midimend --init meinskript.js > ~/Music/Midimend/config.json
+midimend --list-devices ~/Music/Midimend/config.json
+midimend
+.Ed
+.Sh SIEHE AUCH
+README und Notizen zur Skript-API:
+.Lk https://github.com/mschuerig/midimend

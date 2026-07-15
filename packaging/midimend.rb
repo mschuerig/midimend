@@ -34,6 +34,14 @@ class Midimend < Formula
       bash_completion.install "completions/midimend.bash" => "midimend"
     end
     pkgshare.install "examples"
+
+    # German man page. man(1) matches locale directories exactly (no
+    # de_AT → de_DE fallback), hence one copy plus symlinks.
+    german_man = build.head? ? "packaging/midimend.de.1" : "midimend.de.1"
+    (share/"man/de_DE.UTF-8/man1").install german_man => "midimend.1"
+    %w[de_AT de_CH].each do |locale|
+      (share/"man/#{locale}.UTF-8/man1").install_symlink share/"man/de_DE.UTF-8/man1/midimend.1"
+    end
   end
 
   # Starts at login; `crashed: true` restarts after crashes but not after

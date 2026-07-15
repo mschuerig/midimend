@@ -96,6 +96,16 @@ as few surprises as possible, and problems must be easy to diagnose.
      read its secrets, and exporting the Developer ID key to GitHub
      widens its exposure from "this Mac" to "the GitHub account". CI
      (`ci.yml`) builds and tests only and holds no secrets.
+   - **German docs (2026-07-15):** `README.de.md` (cross-linked) and
+     `packaging/midimend.de.1`. macOS man(1) honors
+     `<manpath>/<locale>/man1` — verified empirically; matching is
+     *exact* (no de_AT → de_DE fallback), so the formula installs the
+     page under `de_DE.UTF-8` and symlinks `de_AT`/`de_CH`. Caveat
+     found: translated mdoc section titles disable the SYNOPSIS
+     auto-breaks (one `.br` per `.Nm` variant instead, noted in the
+     page source). Ships with the next release — release.sh now stages
+     both German files into the zip; the tap copy is intentionally
+     untouched until then (the v0.3.0 asset lacks `midimend.de.1`).
    - **Status:** v0.3.0 (2026-07-15) is the released state — parameter
      feedback (paired virtual destinations, `"feedback"` config) and the
      port rename to plain "Midimend"; brew-upgraded, service restarted,

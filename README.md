@@ -1,5 +1,7 @@
 # Midimend
 
+*English — [deutsche Version](README.de.md).*
+
 Mend your MIDI before the DAW sees it.
 
 Hardware controllers don't always speak the dialect your software wants.

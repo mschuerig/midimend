@@ -120,7 +120,8 @@ cmd_publish() {
 
     STAGE="$DIST/midimend-$TAG"
     mkdir -p "$STAGE"
-    cp "$DIST/midimend" README.md LICENSE packaging/midimend.1 "$STAGE/"
+    cp "$DIST/midimend" README.md README.de.md LICENSE \
+        packaging/midimend.1 packaging/midimend.de.1 "$STAGE/"
     cp -R examples packaging/completions "$STAGE/"
     ditto -c -k --keepParent "$STAGE" "$DIST/midimend-$TAG-macos.zip"
 
