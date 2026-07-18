@@ -57,12 +57,24 @@ public final class Engine: @unchecked Sendable {
         try jsQueue.sync {
             self.scriptEngine = try self.makeScriptEngine()
             self.installWatchers()
-        }
-        if config.keepAwake == true {
-            wakeGuard = WakeGuard { [weak self] in self?.declareUserActivity() }
-            log("Keeping the display awake while MIDI is playing")
+            self.syncWakeGuard()
         }
         startIdleTimer()
+    }
+
+    /// Brings the wake guard in line with `config.keepAwake`, creating or
+    /// dropping it (and logging the transition) as the flag changes. Called on
+    /// jsQueue from both startup and reload, so all wakeGuard access — here,
+    /// `noteEvent`, and `tick` — stays on the one queue and needs no lock.
+    private func syncWakeGuard() {
+        let wanted = config.keepAwake == true
+        if wanted, wakeGuard == nil {
+            wakeGuard = WakeGuard { [weak self] in self?.declareUserActivity() }
+            log("Keeping the display awake while MIDI is playing")
+        } else if !wanted, wakeGuard != nil {
+            wakeGuard = nil
+            log("No longer keeping the display awake")
+        }
     }
 
     private func makeScriptEngine() throws -> ScriptEngine {
@@ -154,6 +166,7 @@ public final class Engine: @unchecked Sendable {
                 log("note: MIDI port configuration changed — restart to apply")
             }
             config = newConfig
+            syncWakeGuard()
             scriptEngine = try makeScriptEngine()
             log("Reloaded \(config.script)")
         } catch {

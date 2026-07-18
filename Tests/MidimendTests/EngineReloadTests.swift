@@ -56,12 +56,13 @@ final class EngineReloadTests: XCTestCase {
         try source.write(to: scriptURL, atomically: true, encoding: .utf8)
     }
 
-    private func writeConfig(virtualOut: String? = nil) throws {
+    private func writeConfig(virtualOut: String? = nil, keepAwake: Bool? = nil) throws {
         let out = virtualOut ?? "Midimend Test \(ProcessInfo.processInfo.processIdentifier)"
+        let awake = keepAwake.map { ",\n          \"keepAwake\": \($0 ? "true" : "false")" } ?? ""
         let json = """
         {
           "script": "test.js",
-          "midi": { "outputs": [ { "virtual": "\(out)" } ] }
+          "midi": { "outputs": [ { "virtual": "\(out)" } ] }\(awake)
         }
         """
         try json.write(to: configURL, atomically: true, encoding: .utf8)
@@ -128,6 +129,32 @@ final class EngineReloadTests: XCTestCase {
 
         try writeConfig(virtualOut: "Midimend Test Other \(ProcessInfo.processInfo.processIdentifier)")
         waitForLog(containing: "restart to apply")
+    }
+
+    /// keepAwake follows the config like everything else: turning it on in a
+    /// saved config activates the guard without a restart.
+    func testKeepAwakeTurnsOnViaReload() throws {
+        try writeScript("function HandleMIDI(e) { e.send(); }")
+        try writeConfig()  // keepAwake absent
+        try startEngine()
+        waitForLog(containing: "Script evaluated successfully!")
+        XCTAssertFalse(log.lines.contains { $0.contains("display awake") },
+                       "guard must not be active before the config asks for it")
+
+        try writeConfig(keepAwake: true)
+        waitForLog(containing: "Keeping the display awake")
+    }
+
+    /// ...and turning it off deactivates it, letting the Mac sleep normally
+    /// again — no restart needed.
+    func testKeepAwakeTurnsOffViaReload() throws {
+        try writeScript("function HandleMIDI(e) { e.send(); }")
+        try writeConfig(keepAwake: true)
+        try startEngine()
+        waitForLog(containing: "Keeping the display awake")
+
+        try writeConfig(keepAwake: false)
+        waitForLog(containing: "No longer keeping the display awake")
     }
 
     func testConsecutiveAtomicSavesEachReload() throws {
