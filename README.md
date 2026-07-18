@@ -65,7 +65,14 @@ If a configured device isn't present at startup, midimend warns and lists
 the devices that are, then connects the device automatically when it
 appears. The service's output lands in `/opt/homebrew/var/log/midimend.log`.
 
-To build from source instead:
+To install the latest, unreleased source through Homebrew — built locally and
+managed as a service, just like the release:
+
+```sh
+brew install --HEAD mschuerig/tap/midimend
+```
+
+Or build and run it directly, without Homebrew:
 
 ```sh
 swift build -c release
@@ -90,6 +97,7 @@ swift build -c release
                                           // ("all", or a device list like "inputs"; omit to disable)
     "ignore": ["DAW"]                     // devices to leave alone entirely (substring match)
   },
+  "keepAwake": false,                      // true: playing MIDI keeps the display awake (off by default)
   "parameters": {                          // values for the script's PluginParameters, by name
     "Source CC": 28,                       // numbers for sliders
     "Mode": "Auto",                        // menu parameters accept the valueStrings entry
@@ -133,6 +141,18 @@ go to the hardware port directly, re-select its "Send Value to" after
 switching — MainStage keeps the old feedback route active even though the
 popup shows "None" for it.
 
+### Keep the display awake while playing
+
+Playing a controller isn't something macOS counts as activity, so the
+screensaver and display sleep can kick in mid-set even while you're using an
+instrument. Set `"keepAwake": true` and incoming MIDI holds the display awake
+for as long as someone keeps playing; when the notes stop, the Mac sleeps on
+its normal schedule. Only actual playing counts — notes, controllers, pitch
+bend, program changes — never the housekeeping a device emits on its own
+(Active Sensing, MIDI clock), so an idle-but-connected controller won't keep
+the screen on. It defers display sleep only; system sleep is untouched. Off by
+default.
+
 ## Supported script API (v0)
 
 | Area | Status |
@@ -173,3 +193,21 @@ recorded events out), so it runs anywhere.
 - **v1.x — sync**: MIDI Clock slave (Start/Stop/SPP), maybe Ableton Link.
 - See [PLANNING.md](PLANNING.md) for details and design notes, and
   [IDEAS.md](IDEAS.md) for deliberately postponed features.
+
+## Changelog
+
+- **v0.4.0** — Optional `keepAwake`: while you play, incoming MIDI keeps the
+  display awake and defers the screensaver; the Mac sleeps normally once the
+  notes stop. Off by default.
+- **v0.3.0** — Parameter feedback: a DAW's value changes are returned to
+  controllers (LED rings, motor faders) through a paired virtual destination.
+  The default virtual port is now plain "Midimend".
+- **v0.2.2** — The formula installs the Developer-ID-signed, notarized
+  universal binary.
+- **v0.2.1** — Fixed hot-plug so controllers connected after startup are
+  noticed; added an end-to-end test layer against the real binary.
+- **v0.2.0** — `--measure` reports added latency; `sendAfterMilliseconds` uses
+  a strict zero-leeway timer; the service runs in the interactive tier for
+  lower jitter.
+- **v0.1.x** — Initial release: Scripter-compatible engine on JavaScriptCore,
+  JSON configuration, Homebrew tap and login service.

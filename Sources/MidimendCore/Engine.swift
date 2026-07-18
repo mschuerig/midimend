@@ -1,4 +1,5 @@
 import Foundation
+import IOKit.pwr_mgt
 
 /// Glues config, CoreMIDI I/O, and the script engine together.
 ///
@@ -18,6 +19,8 @@ public final class Engine: @unchecked Sendable {
     private var reloadScheduled = false
     private var latencyStats: LatencyStats?  // touched on jsQueue only
     private var idleTicks = 0
+    private var wakeGuard: WakeGuard?  // touched on jsQueue only; nil unless keepAwake
+    private var userActivityAssertion = IOPMAssertionID(0)  // touched on jsQueue only
 
     public init(
         configPath: String,
@@ -34,6 +37,7 @@ public final class Engine: @unchecked Sendable {
         let midi = try MIDIIO(setup: config.midi, receive: { [weak self] bytes, port, driverTime in
             guard let self else { return }
             self.jsQueue.async {
+                self.wakeGuard?.noteEvent(status: bytes.status)
                 if self.latencyStats == nil {
                     self.scriptEngine?.handleIncoming(bytes, port: port)
                 } else {
@@ -53,6 +57,10 @@ public final class Engine: @unchecked Sendable {
         try jsQueue.sync {
             self.scriptEngine = try self.makeScriptEngine()
             self.installWatchers()
+        }
+        if config.keepAwake == true {
+            wakeGuard = WakeGuard { [weak self] in self?.declareUserActivity() }
+            log("Keeping the display awake while MIDI is playing")
         }
         startIdleTimer()
     }
@@ -86,6 +94,7 @@ public final class Engine: @unchecked Sendable {
         timer.setEventHandler { [weak self] in
             guard let self else { return }
             self.scriptEngine?.idleTick()
+            self.wakeGuard?.tick()
             self.idleTicks += 1
             if self.idleTicks % 40 == 0, let line = self.latencyStats?.summarizeAndReset() {
                 self.log(line)
@@ -93,6 +102,20 @@ public final class Engine: @unchecked Sendable {
         }
         timer.resume()
         idleTimer = timer
+    }
+
+    // MARK: - Keep awake
+
+    /// Tells the system the user is active right now, resetting the display
+    /// idle timer exactly as a keystroke would (`kIOPMUserActiveLocal` — local
+    /// display only). Reuses one assertion ID across calls, the documented way
+    /// to extend rather than pile up assertions. Called on jsQueue only.
+    private func declareUserActivity() {
+        IOPMAssertionDeclareUserActivity(
+            "Midimend: MIDI activity" as CFString,
+            kIOPMUserActiveLocal,
+            &userActivityAssertion
+        )
     }
 
     // MARK: - Hot reload

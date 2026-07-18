@@ -95,6 +95,22 @@ final class ConfigDecodingTests: XCTestCase {
         XCTAssertEqual(config.parameters?["Enabled"], .bool(true))
     }
 
+    // MARK: - keepAwake (opt-in display wake)
+
+    func testKeepAwakeDecodesWhenPresent() throws {
+        let config = try decode("""
+        { "script": "s.js", "midi": { "outputs": [] }, "keepAwake": true }
+        """)
+        XCTAssertEqual(config.keepAwake, true)
+    }
+
+    func testKeepAwakeDefaultsToNilWhenOmitted() throws {
+        let config = try decode("""
+        { "script": "s.js", "midi": { "outputs": [] } }
+        """)
+        XCTAssertNil(config.keepAwake)
+    }
+
     /// The well-known config home: visible in Finder, next to the user's
     /// scripts, in the folder musicians already know from Logic/MainStage
     /// (~/Music/Audio Music Apps).

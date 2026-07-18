@@ -123,6 +123,10 @@ public struct Config: Codable, Sendable {
     /// Parameter values by PluginParameters name. Menu parameters accept the
     /// valueStrings entry as a string; checkboxes accept booleans.
     public var parameters: [String: ParameterValue]?
+    /// Opt-in: while set, incoming MIDI keeps the display awake (defers the
+    /// screensaver/display sleep) for as long as someone keeps playing. Absent
+    /// or false means the machine sleeps on its normal schedule.
+    public var keepAwake: Bool? = nil
 
     /// The well-known config location used when midimend is started without
     /// arguments (e.g. by `brew services`): visible in Finder, next to the

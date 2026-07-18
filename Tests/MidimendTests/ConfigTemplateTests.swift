@@ -43,6 +43,25 @@ final class ConfigTemplateTests: XCTestCase {
         XCTAssertTrue(rendered.contains("\"feedback\": \"all\""))
     }
 
+    /// The keep-awake opt-in is rendered explicitly and off, so it is
+    /// discoverable in the file yet changes nothing until the user flips it.
+    func testSkeletonEmitsExplicitKeepAwakeOff() throws {
+        let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [])
+        XCTAssertEqual(try decode(rendered).keepAwake, false)
+        XCTAssertTrue(rendered.contains("\"keepAwake\": false"))
+    }
+
+    /// keepAwake must render as valid JSON both with and without a trailing
+    /// parameters section (comma placement).
+    func testKeepAwakeRendersValidJSONWithParameters() throws {
+        let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [
+            definition(name: "Source CC", defaultValue: 16),
+        ])
+        let config = try decode(rendered)
+        XCTAssertEqual(config.keepAwake, false)
+        XCTAssertEqual(config.parameters?["Source CC"], .number(16))
+    }
+
     func testSliderBecomesNumber() throws {
         let rendered = ConfigTemplate.render(scriptPath: "s.js", parameters: [
             definition(name: "Source CC", defaultValue: 16),

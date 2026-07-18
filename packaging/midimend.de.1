@@ -35,6 +35,18 @@ Parameter-Feedback, das eine DAW dorthin sendet (LED-Kränze von
 Controllern, Motorfader), wird an die konfigurierten Geräte
 durchgereicht.
 .Pp
+Ist
+.Ql keepAwake
+in der Konfiguration auf
+.Ql true
+gesetzt, hält eingehendes MIDI das Display wach, solange gespielt wird,
+und schiebt Bildschirmschoner und Display-Ruhezustand auf, bis die Noten
+aufhören.
+Nur Channel-Voice-Meldungen zählen; nicht die Haushaltsdaten, die ein
+Gerät von sich aus sendet (Active Sensing, MIDI-Clock).
+Der System-Ruhezustand bleibt unberührt.
+Standardmäßig aus.
+.Pp
 Ohne Argumente führt
 .Nm
 die Konfiguration unter

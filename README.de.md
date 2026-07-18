@@ -71,7 +71,14 @@ vorhandenen Geräte auf und verbindet das Gerät automatisch, sobald es
 erscheint. Die Ausgabe des Dienstes landet in
 `/opt/homebrew/var/log/midimend.log`.
 
-Alternativ aus dem Quelltext bauen:
+Den neuesten, noch unveröffentlichten Stand aus dem Quelltext über Homebrew
+installieren — lokal gebaut und wie die Release-Version als Dienst verwaltet:
+
+```sh
+brew install --HEAD mschuerig/tap/midimend
+```
+
+Oder direkt bauen und ausführen, ohne Homebrew:
 
 ```sh
 swift build -c release
@@ -96,6 +103,7 @@ swift build -c release
                                           // ("all" oder eine Geräteliste wie bei "inputs"; weglassen = aus)
     "ignore": ["DAW"]                     // Geräte ganz in Ruhe lassen (Teilstring-Abgleich)
   },
+  "keepAwake": false,                      // true: MIDI-Spiel hält das Display wach (Standard: aus)
   "parameters": {                          // Werte für die PluginParameters des Skripts, nach Name
     "Source CC": 28,                       // Zahlen für Schieberegler
     "Mode": "Auto",                        // Menü-Parameter nehmen den valueStrings-Eintrag
@@ -142,6 +150,18 @@ das Feedback eines Steuerelements früher direkt an den Hardware-Port,
 wähle „Wert senden an“ nach dem Umstellen neu — MainStage lässt die alte
 Feedback-Route aktiv, obwohl das Einblendmenü dafür „Ohne“ anzeigt.
 
+### Display beim Spielen wach halten
+
+Das Spielen an einem Controller wertet macOS nicht als Aktivität — mitten im
+Set können also Bildschirmschoner und Display-Ruhezustand einsetzen, obwohl du
+gerade ein Instrument benutzt. Mit `"keepAwake": true` hält eingehendes MIDI
+das Display wach, solange gespielt wird; hören die Noten auf, schläft der Mac
+wie gewohnt ein. Nur echtes Spielen zählt — Noten, Controller, Pitch Bend,
+Programmwechsel — nie die Haushaltsdaten, die ein Gerät von sich aus sendet
+(Active Sensing, MIDI-Clock); ein angeschlossener, aber unbespielter Controller
+hält den Bildschirm also nicht an. Betrifft nur den Display-Ruhezustand, nicht
+den System-Ruhezustand. Standardmäßig aus.
+
 ## Unterstützte Skript-API (v0)
 
 | Bereich | Status |
@@ -183,3 +203,22 @@ aufgezeichnete Ereignisse raus) und läuft daher überall.
   Ableton Link.
 - Details und Design-Notizen in [PLANNING.md](PLANNING.md), bewusst
   zurückgestellte Funktionen in [IDEAS.md](IDEAS.md).
+
+## Änderungsverlauf
+
+- **v0.4.0** — Optionales `keepAwake`: Während du spielst, hält eingehendes
+  MIDI das Display wach und schiebt den Bildschirmschoner auf; sobald die Noten
+  aufhören, schläft der Mac wie gewohnt ein. Standardmäßig aus.
+- **v0.3.0** — Parameter-Feedback: Wertänderungen der DAW werden über einen
+  gepaarten virtuellen Zielport an die Controller zurückgegeben (LED-Kränze,
+  Motorfader). Der virtuelle Standardport heißt jetzt schlicht „Midimend“.
+- **v0.2.2** — Die Formula installiert das mit Developer-ID signierte,
+  notarisierte Universal-Binary.
+- **v0.2.1** — Hot-Plug korrigiert, sodass nach dem Start angeschlossene
+  Controller erkannt werden; End-to-End-Testebene gegen das echte Binary
+  ergänzt.
+- **v0.2.0** — `--measure` meldet die zusätzliche Latenz;
+  `sendAfterMilliseconds` nutzt einen Timer ohne Toleranz; der Dienst läuft im
+  interaktiven Tier für weniger Jitter.
+- **v0.1.x** — Erste Veröffentlichung: Scripter-kompatible Engine auf
+  JavaScriptCore, JSON-Konfiguration, Homebrew-Tap und Login-Dienst.

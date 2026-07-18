@@ -140,6 +140,29 @@ final class EndToEndTests: XCTestCase {
                       "unexpected --version output: \(output.text)")
     }
 
+    /// The keep-awake opt-in is wired through the real run path: a config with
+    /// `"keepAwake": true` must build the WakeGuard at startup (announced in the
+    /// log), while the default config must not.
+    func testKeepAwakeStartupPath() throws {
+        try makeProbeClient()
+        let script = "function HandleMIDI(e) { e.send(); }"
+        try script.write(to: directory.appendingPathComponent("test.js"),
+                         atomically: true, encoding: .utf8)
+        let virtualOut = "Midimend E2E Wake \(ProcessInfo.processInfo.processIdentifier)"
+        let config = """
+        {
+          "script": "test.js",
+          "midi": { "outputs": [ { "virtual": "\(virtualOut)" } ] },
+          "keepAwake": true
+        }
+        """
+        let configPath = directory.appendingPathComponent("config.json").path
+        try config.write(toFile: configPath, atomically: true, encoding: .utf8)
+        try launchMidimend(arguments: [configPath])
+        expectOutput(containing: "midimend running")
+        expectOutput(containing: "Keeping the display awake")
+    }
+
     /// The regression test for the dispatchMain() bug: a device appearing
     /// after startup must be noticed (setup-change notification delivered),
     /// logged, connected, and its events processed by the script — and its

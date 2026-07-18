@@ -28,6 +28,17 @@ configured, the virtual output gets a same-named companion port; parameter
 feedback a DAW sends there (control-surface LEDs, motor faders) is passed
 through to the configured devices.
 .Pp
+With
+.Ql keepAwake
+set to
+.Ql true
+in the config, incoming MIDI keeps the display awake while someone is
+playing, deferring the screensaver and display sleep until the notes stop.
+Only channel-voice messages count; the housekeeping a device emits on its
+own (Active Sensing, MIDI clock) does not.
+System sleep is untouched.
+Off by default.
+.Pp
 Without arguments,
 .Nm
 runs the config at

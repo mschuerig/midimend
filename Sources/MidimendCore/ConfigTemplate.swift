@@ -23,11 +23,15 @@ public enum ConfigTemplate {
             "    ],",
             "    \"feedback\": \"all\"",
         ]
+        lines.append("  },")
+        // Opt-in and explicit (like feedback): off by default, but present so
+        // the option is discoverable by anyone reading the file. When true,
+        // incoming MIDI keeps the display awake while someone is playing.
         let entries = parameters.compactMap(parameterLine)
         if entries.isEmpty {
-            lines.append("  }")
+            lines.append("  \"keepAwake\": false")
         } else {
-            lines.append("  },")
+            lines.append("  \"keepAwake\": false,")
             lines.append("  \"parameters\": {")
             lines.append(entries.joined(separator: ",\n"))
             lines.append("  }")
